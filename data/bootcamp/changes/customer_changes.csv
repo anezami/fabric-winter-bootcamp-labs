@@ -1,0 +1,4 @@
+operation,customer_id,full_name,email,city,loyalty_tier,effective_at
+U,C003,Chloe Janssen,chloe.janssen@example.test,Amsterdam,Gold,2026-11-02T00:00:00
+I,C007,Guus Meijer,guus.meijer@example.test,Utrecht,Silver,2026-11-02T00:00:00
+D,C002,,,,,2026-11-02T00:00:00

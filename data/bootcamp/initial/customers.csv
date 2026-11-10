@@ -1,0 +1,7 @@
+customer_id,full_name,email,city,loyalty_tier,effective_at
+C001,Alice Ng,alice.ng@example.test,Rotterdam,Silver,2026-01-01T00:00:00
+C002,Bram de Vries,bram.vries@example.test,Amsterdam,Bronze,2026-01-01T00:00:00
+C003,Chloe Janssen,chloe.janssen@example.test,Utrecht,Silver,2026-01-01T00:00:00
+C004,Daan Bakker,daan.bakker@example.test,Eindhoven,Gold,2026-01-01T00:00:00
+C005,Emma Visser,emma.visser@example.test,Antwerp,Silver,2026-01-01T00:00:00
+C006,Finn Smit,finn.smit@example.test,Leiden,Bronze,2026-01-01T00:00:00
