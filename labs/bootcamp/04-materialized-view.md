@@ -62,6 +62,10 @@ The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check
 then expects the changed state, and each processor's rerun must still be a
 no-op.
 
+**Timing:** on F2 the pipeline takes about 10 minutes (four serial cold
+Spark starts). Start it as soon as the MLV check passes, and inspect lineage
+and the views while it runs.
+
 ```sql
 SELECT customer_id, city, loyalty_tier, valid_from, valid_to, is_current
 FROM silver.customer_history
