@@ -1,7 +1,9 @@
 # Pre-work: get ready
 
-Complete this before the session. The live 45 minutes are for designing,
-generating and running the lakehouse, not installing tools.
+Prepare tools and access before the session. Begin the live build with an
+**empty workspace** and a dedicated active F2 capacity already assigned.
+Lab 1 creates the lakehouse, stages CSVs and provisions shells/pipeline;
+setup and cold Spark startup count inside the 45-minute build.
 
 ## 1. Check tools and access
 
@@ -9,8 +11,9 @@ You need:
 
 - Git, Python 3.10+ and Azure CLI.
 - GitHub Copilot CLI with an active Copilot account.
-- Your assigned Fabric workspace, permission to create notebooks/lakehouse
-  items, and an active F2 capacity with Materialized Lake View support.
+- Your assigned empty Fabric workspace, permission to create the lakehouse,
+  notebooks and pipeline, and its dedicated active F2 capacity with
+  Materialized Lake View support.
 - The public [Skills for Fabric](https://github.com/microsoft/skills-for-fabric)
   bundle, including `spark-cli`.
 
@@ -39,60 +42,32 @@ Restart Copilot after installation and confirm `spark-cli` is available.
 If you use another supported Copilot client, follow the public package's
 client-specific setup. Do not copy CLI configuration into a different client.
 
-## 2. Create and stage your target
+## 2. Check access only
 
-Ask Copilot to discover your assigned workspace and confirm its active
-capacity and your identity. Approve only creation of a **schema-enabled**
-lakehouse named `lh_bootcamp` in that workspace.
+Ask Copilot to list and confirm the exact assigned workspace, its capacity
+assignment and Active status, your identity and permission to create items.
+Ask the instructor to confirm that the capacity is dedicated to your workspace
+and that the runtime supports MLVs. Do not test access by creating items.
 
-If that lakehouse already contains another build, stop and ask the instructor
-for an appropriate empty target. Do not delete, reset or overwrite it.
+Check that the workspace is empty and the six local [CSV files](../../data/bootcamp/)
+are present. If the workspace contains another build, stop and ask the
+instructor for the correct target. Do not delete, reset or overwrite anything.
 
-Upload the files from [the data folder](../../data/bootcamp/):
-
-| Local folder/file | Destination inside `lh_bootcamp` |
-|---|---|
-| Five CSVs in `data/bootcamp/initial/` | `Files/bootcamp/initial/` |
-| `data/bootcamp/changes/customer_changes.csv` | `Files/bootcamp/changes/customer_changes.csv` |
-
-Use the Lakehouse explorer or approved Fabric OneLake upload tools. Preserve
-the filenames, headers and values. Files remain read-only after upload.
-
-## 3. Prepare empty notebooks and pipeline
-
-Follow [notebook and pipeline setup](setup.md). It creates four bound shells
-containing the fixed validator, an unimplemented placeholder and a final
-check, plus `pl_bootcamp_build` with this success-only order:
-
-```text
-nb_bootcamp_bronze -> nb_bootcamp_silver -> nb_bootcamp_gold_cdf -> nb_bootcamp_mlv
-```
-
-Do not generate transformations, create tables, run all cells or trigger the
-pipeline during pre-work. The implementation placeholder intentionally fails.
-
-To warm one interactive session, run only the validator cell and this
-temporary cell in the Bronze notebook, then remove the temporary cell:
-
-```python
-spark.sql("SELECT 1 AS ready").show()
-```
-
-Use one Spark workload at a time. Stop an idle interactive session before
-submitting a separate notebook job. A warm session does not guarantee job or
-pipeline session reuse; never submit duplicate runs while waiting.
+Do not create a lakehouse, upload CSVs, provision notebooks/pipelines, create
+tables or start Spark during pre-work. Do not load prepared transformations.
+The [initial Lab 1 prompt](01-bronze.md) performs [setup](setup.md) after
+approval and loads the unchanged [validator](validate-lakehouse.py) into
+four empty notebook shells.
 
 ## Ready check
 
-- Correct signed-in identity, assigned workspace and active capacity.
-- Empty schema-enabled `lh_bootcamp` with all six CSVs in the required paths.
-- Four notebooks bound to that lakehouse, with unchanged validator and
-  final-check cells; no transformations or tables yet.
-- Pipeline references those notebook IDs in serial success-only order,
-  with no schedule or parallel branches.
-- At most one warm interactive session.
+- GitHub Copilot, `spark-cli`, Python and Azure CLI are available; sign-in works.
+- Correct identity and assigned **empty workspace**, with its dedicated F2
+  capacity already assigned and Active.
+- All six CSVs exist locally under `data/bootcamp/`; no upload is required yet.
+- No lakehouse, notebooks, pipeline, data tables or Spark session exist yet.
 
 If anything is blocked, ask the instructor before starting. Do not change
 workspaces, capacities or permissions yourself.
 
-**Next:** [Lab 1 - Bronze](01-bronze.md).
+**Next:** [Lab 1 - create the lakehouse and Bronze](01-bronze.md).

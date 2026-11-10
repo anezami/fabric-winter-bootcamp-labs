@@ -3,7 +3,7 @@
 | Field | Contract |
 |---|---|
 | Goal | Explain daily Zava sales by date, store and channel while retaining customer history |
-| Target | The participant's confirmed workspace and schema-enabled `lh_bootcamp` |
+| Target | An assigned empty workspace with its dedicated active F2 capacity; create schema-enabled `lh_bootcamp` in Lab 1 |
 | Engine | Four independent Fabric notebooks and one serial Data Pipeline |
 | Inputs | Six immutable synthetic CSVs under `Files/bootcamp/` |
 | Acceptance | Unchanged [fixed validator](../labs/bootcamp/validate-lakehouse.py) plus execution, CDF and MLV evidence |
@@ -16,9 +16,26 @@ flow, history policy, serving choices and each write set before execution.
 Use short plans and numbered tasks under `specs/plans/`, as described in the
 [guardrails](../.github/copilot-instructions.md).
 
-Pre-work provides `nb_bootcamp_bronze`, `nb_bootcamp_silver`,
-`nb_bootcamp_gold_cdf` and `nb_bootcamp_mlv`, each with the complete validator,
-a fail-fast implementation placeholder and an unchanged final check.
+Pre-work is tools, repository clone, sign-in and read-only access checks only.
+Each participant receives an empty workspace with a dedicated capacity already
+assigned and Active. No lakehouse, staged CSVs, notebooks, pipeline or warm
+Spark session are required in advance.
+
+The initial Lab 1 prompt confirms identity, workspace and capacity, shows the
+setup write set and waits for approval. Use Fabric skills and CLI to create
+`lh_bootcamp` with `creationPayload.enableSchemas=true`, wait for completion
+and verify schema support. Upload the six checked-in CSVs to the paths below,
+verifying exact bytes, then use the local builder to deploy
+`nb_bootcamp_bronze`, `nb_bootcamp_silver`, `nb_bootcamp_gold_cdf` and
+`nb_bootcamp_mlv`, each with the complete validator, a fail-fast implementation
+placeholder and an unchanged final check. Capture actual IDs and create their
+serial `pl_bootcamp_build`; do not schedule it or run placeholders.
+See [Lab 1 setup](../labs/bootcamp/setup.md).
+
+On retry, reconcile only items from the same confirmed setup; poll accepted
+operations rather than duplicate submissions. Skip identical files and stop
+on unexpected items, mismatched files or incompatible bindings. Never reset
+or overwrite existing work. Setup approval is not code-execution approval.
 Generate transformation code live. Every notebook defines its own imports
 and helpers; persistent state lives in Delta tables and watermarks.
 
@@ -31,13 +48,19 @@ or expected values to obtain a pass.
 success-only dependencies. Trigger individual notebooks as they become
 ready. Run the full pipeline only after all four implementations are ready.
 Use one execution path per stage: a notebook job or manual interactive cells,
-never both concurrently. A warm session does not guarantee job/session reuse.
+never both concurrently. Include cold Spark startup; do not assume session reuse.
 
-The live build is limited to 45 minutes. Follow
+The live build is limited to 45 minutes, including lakehouse creation, CSV
+uploads, shell/pipeline provisioning and cold startup in Lab 1's 10-minute
+slot. If setup is blocked, ask the instructor; recovery code cannot replace
+missing resources, uploads or bindings. For a blocked implementation, follow
 [repair and recovery](../labs/bootcamp/recovery.md) if blocked, and identify
 supplied or incomplete stages. Optional Labs 5 and 6 are outside this time box.
 
 ## 2. Inputs
+
+Lab 1 uploads the six local `data/bootcamp/` CSVs into the newly created
+lakehouse before generating Bronze ingestion:
 
 | OneLake path | Grain | Rows |
 |---|---|---|
@@ -68,6 +91,9 @@ algorithm for multiple business events between watermarks.
 
 - Use only the confirmed workspace and isolated `lh_bootcamp`. Do not
   create/delete workspaces or change capacities, permissions or other resources.
+- After setup approval, the initial prompt may create `lh_bootcamp`, stage the
+  six CSVs and provision the four named shells and their serial pipeline.
+  The organizer supplies the empty workspace and its dedicated active capacity.
 - Create only the tables/view specified below in `bronze`, `silver`, `gold`
   and `lab_ops`. Keep OneLake files read-only after staging.
 - This is a lakehouse-building exercise: no quarantine, invented DQ rules,
@@ -233,7 +259,8 @@ only when Fabric reports that strategy; a create/full refresh is not proof.
 
 | Checkpoint | Required evidence |
 |---|---|
-| Pre-work | Six exact inputs, empty schema-enabled target, four bound shells, serial pipeline |
+| Pre-work | Tools and sign-in ready; assigned empty workspace with dedicated active capacity; six CSVs available locally |
+| Lab 1 setup | Approved schema-enabled lakehouse, six exact uploads, four bound empty shells with fixed checks and an unscheduled serial pipeline; actual IDs and completion evidence |
 | Bronze | Fixed `bronze` PASS; source values/types/audit intact; ingestion repeatable; state CDF enabled |
 | Silver | Fixed `silver` PASS; typed values exact; six initial history versions; bootstrap watermark |
 | Gold before events | Fixed `gold` PASS; exact star, dates, as-of keys and facts; both bootstrap watermarks |

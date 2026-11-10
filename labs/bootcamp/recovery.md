@@ -3,6 +3,18 @@
 Keep the fixed specification and checks. A failed stage is a debugging
 exercise, not permission to change expected values or reset history.
 
+## Recover setup safely
+
+If the initial setup is interrupted, keep the returned item/operation IDs.
+Ask Copilot to poll the accepted operation or rediscover only this approved
+setup's items and bindings before retrying. Reuse matching items and skip
+identical uploads; stop on conflicts. Do not duplicate creates, overwrite
+files or reset another build. Ask the instructor about access/capacity blocks.
+
+The [Lab 1 setup checkpoint](setup.md#4-wire-the-serial-pipeline) must be
+complete before transformation recovery: supplied code cannot replace a
+missing lakehouse, input files or notebook bindings.
+
 ## Repair your generated code
 
 Wait for the current job to end and open its notebook run snapshot in Fabric

@@ -61,7 +61,7 @@ aggregate SELECT is useful diagnosis but is not an MLV pass. Follow
 
 Stop after the 45-minute build. Show the pipeline dependency graph.
 An optional full serial replay can run afterward using
-[the setup execution guidance](setup.md#4-execute-during-the-labs); preserve
+[the setup execution guidance](setup.md#5-generate-approve-and-execute); preserve
 customer history, keys, facts and watermarks. Stop sessions you started.
 
 **Optional next steps:** [Project Osmos](05-osmos-replay.md) in a fresh

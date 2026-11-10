@@ -18,12 +18,19 @@ transformations. If a business rule or target is unclear, stop and ask.
 
 ## Fabric boundaries
 
-- Confirm `az account show`, the assigned workspace and the schema-enabled
+- Start from the participant's assigned empty workspace with its dedicated
+  active F2 capacity already assigned. Pre-work is tools, clone, sign-in and
+  read-only access checks, not lakehouse/files/notebook/pipeline creation or
+  Spark warm-up.
+- Confirm `az account show`, the assigned workspace/capacity and proposed
   `lh_bootcamp` before the first remote write. Discover IDs; never guess them.
 - Use only that target. Never create/delete workspaces, resize/resume/pause
   capacities, change permissions, or touch another participant's resources.
-- Setup may create the approved lakehouse, four empty stage notebooks and
-  serial pipeline. During the live labs, table writes stay in `bronze`,
+- After setup approval, the initial Lab 1 prompt may create schema-enabled
+  `lh_bootcamp`, upload the six CSVs, deploy four bound empty stage notebooks
+  and wire the serial pipeline. Reconcile this setup's items on retry, skip
+  identical uploads and stop on conflicts; never duplicate or reset resources.
+  Obtain separate code approval before transformations. Table writes stay in `bronze`,
   `silver`, `gold` and `lab_ops`, and only on objects named in the spec.
 - Keep OneLake CSVs immutable. Raw Bronze snapshots initialize once and
   preserve source values as strings plus audit columns.
@@ -55,7 +62,8 @@ transformations. If a business rule or target is unclear, stop and ask.
 
 ## Timing and optional work
 
-The four live labs have a hard 45-minute limit. Use
+The four live labs have a hard 45-minute limit, including setup and cold Spark
+startup in Lab 1's 10-minute slot. Use
 `labs/bootcamp/recovery.md` if blocked; distinguish generated, supplied and
 incomplete stages. Supplied code is not evidence of live generation.
 
