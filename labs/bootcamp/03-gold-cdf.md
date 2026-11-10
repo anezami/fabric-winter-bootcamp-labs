@@ -1,92 +1,85 @@
-# Lab 3: Gold and both CDF processors
+# Lab 3: Gold from the Silver change feed
 
-**15 minutes.** Prerequisite: Lab 2 passes.
+**12 minutes.** Prerequisite: Lab 2 passes.
 
-Use `nb_bootcamp_gold_cdf` with its own imports/helpers. Generate in two
-bounded steps. For a notebook job, approve and save **both steps** before one
-run; an unfinished notebook would fail its final CDF check. Manual execution
-may run the approved bootstrap and its check before generating step 2.
+Open `nb_bootcamp_gold`. It reads only Silver; define all imports and
+CDF/watermark helpers here, because no Python state carries over. Keep the
+fixed cells unchanged.
 
-## 1. Generate the Gold bootstrap
-
-```text
-Use spark-cli and sections 6 and 8 of specs/bootcamp-lakehouse.spec.md.
-Save a short Gold/CDF plan and numbered tasks under specs/plans/.
-Generate new cells bootstrapping the Gold star from Silver: exact columns,
-types, date coverage, table descriptions, column comments, order-line grain,
-HALF_UP rounded revenue and the as-of customer join.
-Bootstrap the Silver-to-Gold watermark before events and preserve the
-Bronze-to-Silver watermark. Initialize customer targets and the fact snapshot
-once; existing targets require valid durable watermarks.
-Define imports/helpers locally. Do not apply events yet or alter the
-spec/fixtures/validator. Show code and bounded write set, then stop for
-approval. Do not submit a notebook job until the incremental step is ready.
-```
-
-After bootstrap, include this fixed check **before** the event cells:
-
-```python
-if not bootcamp_changes_started(spark):
-    validate_bootcamp(spark, "gold")
-```
-
-This conditional is for completed-build replay. It must never suppress the
-final CDF check. If a prior run stopped during events, resume the incremental
-step; a partial event state is not a valid checkpoint.
-
-## 2. Generate the incremental step
+## 1. Generate and review
 
 ```text
-Generate new cells applying the immutable customer event batch to
-bronze.customers_current, then consuming Bronze CDF into Silver SCD2 and
-Silver CDF into gold.dim_customer per section 6.
-Expose process_bronze_to_silver() and process_silver_to_gold() with no arguments.
-Read closed version ranges after durable watermarks through captured upper
-versions, ignore update_preimage, and select the latest event per target key
-for this bounded fixture. Print the actual consumed ranges.
-U expires/inserts, I inserts, D expires without removing history. Stamp the
-delete event's effective_at on Bronze state before removing it with keyed
-MERGE ... WHEN MATCHED THEN DELETE; no subquery-based DELETE.
-Target writes must be retry-safe before watermark advancement. Advance each
-watermark only after target writes; fail on unavailable history. Never rebuild
-targets from snapshots to pretend CDF was used. Keep facts as the initial
-snapshot. Skip already-applied events and no-op source writes.
-Whole-notebook replay must preserve data, keys, facts and watermark values.
-Show code and write set, explain safety, then stop for approval.
+Use spark-cli and spec sections 3, 6 and 8 of
+specs/bootcamp-lakehouse.spec.md. Save a short Gold plan and numbered tasks
+under specs/plans/. Generate NEW PySpark/Spark SQL code for nb_bootcamp_gold
+that reads only silver and writes only gold plus its five
+lab_ops.cdf_watermarks rows. Define process_silver_to_gold() and call it
+once at the end:
+- Create the five documented Gold tables once, with table and column
+  comments and the exact columns/types.
+- Read each Silver source's change feed from watermark + 1 (version 0 on the
+  first run) through a captured current version, ignoring update_preimage,
+  and print the consumed version ranges.
+- dim_customer, dim_product and dim_store apply the latest change per key
+  with a keyed MERGE (dim_customer keyed on customer_sk); dim_date adds the
+  missing days between the first and last order date.
+- fact_sales recomputes only the orders touched by the orders/order_lines
+  changes at order-line grain, joins the customer version valid at order_ts,
+  rounds net_amount per line, upserts with MERGE and removes lines deleted
+  from Silver.
+- Advance each watermark only after its target write; stop on unavailable
+  history; a run without new versions commits nothing.
+Start the cell with a # comment header and give every function a docstring.
+Replace only the placeholder; do not copy supplied transformations or edit
+the spec, CSVs or validator. Show the code and write set, explain replay
+safety, then stop for my approval.
 ```
 
-Review the CDF reads, key selection, preimage filtering, write order and
-watermark handling. After approval, save both steps and use
-[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code), or finish
-the chosen manual execution path.
+Before approving, check the CDF reads, update-preimage filter, MERGE keys and
+watermark ordering. Use
+[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
+run this notebook, or run approved cells manually.
 
-## 3. Verify events and replay
+## 2. Verify
 
-The unchanged final cell verifies completed state and reruns the processors:
+The unchanged final check validates Gold and replays the processor:
 
 ```python
-validate_bootcamp(spark, "cdf")
-before = bootcamp_snapshot(spark)
-process_bronze_to_silver()
+validate_bootcamp(spark, "gold")
+before = bootcamp_snapshot(spark, "gold")
 process_silver_to_gold()
-assert bootcamp_snapshot(spark) == before, "Replay changed persisted results"
+assert bootcamp_snapshot(spark, "gold") == before, "Rerunning process_silver_to_gold() changed gold"
+print("PASS: gold rerun is a no-op")
 ```
 
-Inspect the generated code and consumed version ranges. Output equality
-alone does not establish that the processors used CDF.
+Query the star:
+
+```sql
+SELECT d.date, f.store_id, f.channel, c.city, SUM(f.net_amount) AS net_amount
+FROM gold.fact_sales f
+JOIN gold.dim_date d ON d.date_key = f.date_key
+JOIN gold.dim_customer c ON c.customer_sk = f.customer_sk
+GROUP BY d.date, f.store_id, f.channel, c.city
+ORDER BY d.date;
+```
+
+Output equality alone cannot prove the method used CDF: keep the generated
+code and printed version ranges as evidence.
 
 ## Definition of done
 
-- Initial `gold` PASS and final `cdf` PASS, with actual bounded CDF ranges.
-- Nine sales facts retain correct historical customer keys and total
-  16 units / 516.73 net sales.
-- Silver and Gold each contain eight customer-history rows, six current:
-  C003 retains its expired Utrecht/Silver version plus current Amsterdam/Gold;
-  C007 is current; C002 is expired with history retained.
-- Both durable watermarks are current. Replaying both functions changes
-  neither snapshots nor keys/facts/watermarks. Save evidence and tick tasks.
+- Actual `PASS: bootcamp gold contract, initial load (fixed read-only checks)`
+  and `PASS: gold rerun is a no-op`.
+- Gold dimensions equal Silver; `dim_date` covers 2026-10-10 to 2026-10-16.
+- `fact_sales` has 9 lines, 16 units and 516.73 net sales with as-of
+  customer keys.
+- The five Silver-to-Gold watermarks equal the Silver versions; consumed
+  version ranges are printed.
+- Gold tables and columns carry comments; code is documented. Save evidence
+  and tick your tasks.
 
-Use [repair and recovery](recovery.md) on failure. Do not overwrite history
-or reset watermarks. Do not run the full pipeline until Lab 4 is ready.
+On failure, have Copilot patch only the generated code, approve and rerun.
+Never reset watermarks, overwrite history or relax the contract to pass; see
+[repair and recovery](recovery.md). Do not run the full pipeline until Lab 4.
 
-**Next:** [Lab 4 - Materialized lake view](04-materialized-view.md).
+**Next:** [Lab 4 - Materialized lake views and the change batch](04-materialized-view.md).

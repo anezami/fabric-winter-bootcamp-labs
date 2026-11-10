@@ -10,7 +10,7 @@ Setup and cold Spark startup count inside Lab 1's 10-minute slot.
 Use `spark-cli` and the signed-in CLI identity (`az account show`). Discover
 the exact assigned workspace, its capacity and current items. On a first run
 it must be empty. Show the identity, workspace, capacity, proposed lakehouse,
-six upload destinations, four notebooks and pipeline; obtain setup approval
+five upload destinations, four notebooks and pipeline; obtain setup approval
 before the first remote write. Do not create/reassign workspaces or capacities,
 change permissions or guess IDs.
 
@@ -40,12 +40,12 @@ schema support before proceeding. A default schema-disabled lakehouse is
 not acceptable; do not silently substitute one.
 
 Upload the five `data/bootcamp/initial/*.csv` files to
-`lh_bootcamp/Files/bootcamp/initial/` and `customer_changes.csv` from
-`data/bootcamp/changes/` to `lh_bootcamp/Files/bootcamp/changes/`, using the
-skill's OneLake upload tooling. OneLake uses the storage token audience,
-not the Fabric API audience. Verify all six paths and uploaded bytes against
-the local files. On retry, skip identical uploads; stop on a mismatch.
-Files are immutable after landing.
+`lh_bootcamp/Files/bootcamp/initial/` using the skill's OneLake upload
+tooling. OneLake uses the storage token audience, not the Fabric API
+audience. Verify all five paths and uploaded bytes against the local files.
+On retry, skip identical uploads; stop on a mismatch. Files are immutable
+after landing. Do not upload `data/bootcamp/changes/customer_changes.csv`
+yet: Lab 4 lands it as new data.
 
 ## 3. Generate and deploy empty shells
 
@@ -61,17 +61,19 @@ $lakehouseId = Read-Host "Discovered and confirmed lh_bootcamp ID"
 python labs\bootcamp\prepare-artifacts.py shells --workspace-id $workspaceId --lakehouse-id $lakehouseId --output out\bootcamp-shells
 ```
 
-The output folder must be new or empty. Each `.ipynb` includes the complete
-[fixed validator](validate-lakehouse.py), a `NotImplementedError` placeholder
-and its final check. No transformation code is supplied.
+The output folder must be new or empty. Each `.ipynb` contains a markdown
+description, the complete [fixed validator](validate-lakehouse.py), a
+`NotImplementedError` placeholder and the fixed stage check. No
+transformation code is supplied.
 
 Within the approved setup write set, create exactly `nb_bootcamp_bronze`,
-`nb_bootcamp_silver`, `nb_bootcamp_gold_cdf` and `nb_bootcamp_mlv` from the four
+`nb_bootcamp_silver`, `nb_bootcamp_gold` and `nb_bootcamp_mlv` from the four
 `out\bootcamp-shells` request definitions. Use Notebook item creation with
 `definition.format` set to `ipynb`; the request's `definition` object is the
 definition, not the whole request body. Capture actual IDs, wait for completion
-and read back each definition to verify the default lakehouse, unchanged
-validator, fail-fast placeholder and final fixed check. Do not run the shells.
+and read back each definition to verify the default lakehouse, description,
+unchanged validator, fail-fast placeholder and final fixed check. Do not run
+the shells.
 
 Alternatively, import the four `.ipynb` files using Fabric's notebook import
 and inspect their bindings. Do not create a second set of notebooks.
@@ -83,7 +85,7 @@ each mapped to the corresponding **discovered** notebook ID:
 {
   "bronze": "<discovered Bronze notebook ID>",
   "silver": "<discovered Silver notebook ID>",
-  "gold_cdf": "<discovered Gold/CDF notebook ID>",
+  "gold": "<discovered Gold notebook ID>",
   "mlv": "<discovered MLV notebook ID>"
 }
 ```
@@ -101,30 +103,36 @@ Ask Copilot to create `pl_bootcamp_build` from
 with the supplied definition. Do not schedule or run it.
 
 Inspect its activities in Fabric: the correct workspace/notebook IDs,
-Bronze -> Silver -> Gold/CDF -> MLV, success-only dependencies, zero retries,
+Bronze -> Silver -> Gold -> MLV, success-only dependencies, zero retries,
 no parallel branches. A generated 15-minute activity timeout does not replace
 the overall 45-minute live-build limit.
 
-**Setup checkpoint:** one schema-enabled `lh_bootcamp`, six byte-identical
+**Setup checkpoint:** one schema-enabled `lh_bootcamp`, five byte-identical
 landed CSVs, four correctly bound empty shells with fixed checks, and one
 unscheduled serial pipeline. Save actual item IDs and completion evidence
 locally. No data tables or transformations have run; no warm session is required.
 
 ## 5. Generate, approve and execute
 
-Generate and approve one notebook at a time. Replace only its implementation
-placeholder, preserving both fixed cells. Save before submitting that
-individual notebook, or run its cells manually. Keep actual job IDs and
-check output. Never execute the full pipeline while later shells are empty.
+Generate and approve one notebook at a time using Labs 1-4. Replace only its
+implementation placeholder, preserving the description, validator and fixed
+check cells. Save the notebook before submitting that individual notebook, or
+run its cells manually. Keep actual job IDs and check output. Never execute
+the full pipeline while later shells are unimplemented.
 
-All stages need their own imports/helpers. Preserve existing customer
-state/history, fact snapshot and watermarks. Repair an interrupted Gold/CDF
-run before replaying the full build.
+Run `pl_bootcamp_build` only once all four notebooks are implemented and
+checked: Lab 4 uses one pipeline run to carry the change batch through every
+layer. A failed stage blocks downstream stages. Stop any previous writer and
+confirm it has ended before switching execution paths.
 
-After all four labs pass, the pipeline can replay the build. Capture
-`bootcamp_snapshot(spark)` before and after the replay in a validation context,
-and compare it. Move the replay after the session if it would exceed the
-time box. Stop any previous writer before changing execution paths.
+Every stage reloads its own imports and helpers and reads persisted Delta
+state and watermarks; no Python state carries between notebooks. The fixed
+checks find the expected state from the landed files: the initial load until
+`Files/bootcamp/changes/customer_changes.csv` exists, then the changed state.
+Each Bronze, Silver and Gold check also reruns its processor and requires an
+identical `bootcamp_snapshot(spark, "<layer>")`. On failure, repair the
+generated code and rerun that notebook; never reset tables or watermarks to
+make a check pass.
 
 For an approved update to an existing notebook, pass only the emitted
 `definition` object to `updateDefinition`, not the complete create request.

@@ -1,7 +1,7 @@
 # Lab 6: Semantic model and Fabric IQ
 
-**Optional, after the session; untimed.** Prerequisite: completed Gold/CDF
-and MLV checks. No report is required.
+**Optional, after the session; untimed.** Prerequisite: completed Gold and
+MLV checks, including the change batch. No report is required.
 
 AI proposes a model and measures from the business goal and actual Gold
 schema. You approve the design before creation, then query the real model.
@@ -50,8 +50,8 @@ date handling, formats, measure meanings and the trade-off between the Gold
 star and an aggregate-only model.
 If including customer history, join fact_sales.customer_sk to unique
 dim_customer.customer_sk, not repeated customer_id. Preserve as-of attributes.
-Do not relate the MLV to customer/product grain or double-count facts and
-aggregates. Show the complete proposed model and exact item write set.
+Do not relate gold.sales_daily to customer/product grain or double-count
+facts and aggregates. Show the complete proposed model and exact item write set.
 Keep Gold read-only. No report, permission or capacity changes.
 Stop for approval before creating or deploying anything.
 ```

@@ -16,8 +16,8 @@ Confirm the new target, then run only the setup portion of the
 Do not reset resources, create workspaces or change capacity yourself.
 
 Confirm identity, assigned workspace, isolated schema-enabled `lh_bootcamp`,
-active F2 capacity, six staged CSVs, four bound shells and their serial
-pipeline. Do not overlap an Osmos task with other notebook/pipeline writers.
+active F2 capacity, five staged initial CSVs, four bound shells and their
+serial pipeline. Do not overlap an Osmos task with other notebook/pipeline writers.
 
 Use the public `project-osmos` skill from
 [Skills for Fabric](https://github.com/microsoft/skills-for-fabric).
@@ -31,16 +31,18 @@ prerequisites. Never send credentials in a prompt.
 Use project-osmos. In my confirmed assigned workspace and fresh lh_bootcamp,
 build the Zava sales lakehouse from Files/bootcamp/ using
 specs/bootcamp-lakehouse.spec.md and its fixed validation contract.
-Create raw Bronze snapshots, typed Silver, SCD2 customer history, the Gold
-star, bounded Bronze-to-Silver and Silver-to-Gold customer CDF processors,
-and gold.sales_daily as a Fabric materialized lake view.
+Create raw Bronze tables with CDF, typed Silver tables and SCD2 customer
+history fed only by the Bronze change feed, a documented Gold star fed only
+by the Silver change feed, and gold.sales_daily and gold.customer_current as
+Fabric materialized lake views over Silver.
 Keep Files immutable. Preserve expired history and the initial fact snapshot.
 Use durable per-pair watermarks, target writes before watermark advancement,
 and replay-safe processing. Stop on missing history or unsupported features.
-Use the four independent notebooks and existing serial pipeline, with local
-imports/helpers and unchanged validation in every context. Use no shared
-Python globals. Validate each stage at its specified checkpoint and retain
-the Gold-before-events check plus the final CDF/replay checks.
+Then land data/bootcamp/changes/customer_changes.csv and run the pipeline once.
+Use the four separate Bronze, Silver, Gold and MLV notebooks, each writing
+only its own layer, and the existing serial pipeline, with local
+imports/helpers, comments and unchanged validation in every context. Use no
+shared Python globals. Keep every fixed final check.
 Write only the specified objects in lh_bootcamp schemas bronze, silver,
 gold and lab_ops. Do not change workspaces, capacities or permissions.
 Show the plan and exact write set for my approval before execution.
@@ -51,27 +53,25 @@ task ID for follow-up; inspect its status rather than submitting duplicates.
 
 ## 3. Check the result
 
-Use the unchanged validator at the same checkpoints as Labs 1-4. On the
-completed build, the validator supports:
+Use the unchanged fixed check in each stage notebook, as in Labs 1-4. Before
+the change file lands each stage prints its initial-load PASS; after the
+pipeline run it prints
+`PASS: bootcamp <stage> contract, after the customer change batch (fixed read-only checks)`.
+The Bronze, Silver and Gold checks also print `PASS: <stage> rerun is a no-op`.
 
-```python
-for stage in ("bronze", "silver", "gold", "cdf"):
-    validate_bootcamp(spark, stage, after_changes=True)
-validate_bootcamp(spark, "mlv")
-```
-
-Run the CDF replay check in the Gold/CDF notebook where its two processor
-functions are defined. Inspect real bounded reads, version ranges,
-watermark ordering, MLV DDL and Fabric lineage. Do not infer the method from
-matching counts, or incremental MLV refresh from a successful create.
+Inspect real bounded reads, version ranges, watermark ordering, MLV DDL and
+Fabric lineage. Do not infer the method from matching counts, or incremental
+MLV refresh from a successful create.
 
 ## Definition of done
 
-- The task actually completes and all fixed stage checks pass.
-- History, facts, keys and watermarks meet the same contract as Lab 3;
-  no-new-input replay preserves them.
-- The real MLV has seven reconciled groups, six FAIL constraints and
-  inspected lineage.
+- The task actually completes and every fixed stage check passes, before and
+  after the change batch.
+- History, facts, keys and all ten watermarks meet the same contract as
+  Labs 1-4; reruns without new input preserve them.
+- Both real MLVs pass: `gold.sales_daily` has seven reconciled groups and six
+  FAIL constraints, `gold.customer_current` six current customers, and
+  lineage is inspected.
 - Keep generated notebooks, task ID, output and an explanation of how
   Osmos approached the specification. Label unsupported/incomplete work.
 

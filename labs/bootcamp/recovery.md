@@ -45,11 +45,16 @@ the implementation cells in the existing notebook; keep the validator,
 final checks, notebook ID and pipeline wiring. Recovery cells must include
 their own imports and helpers.
 
-Run that stage and its fixed checks, then continue downstream. Resume an
-interrupted customer-event batch in Gold/CDF before full pipeline replay.
-Never reseed a missing watermark for an existing target or discard history.
-Malformed raw tables or unavailable CDF history need an explicit instructor
-repair decision, not an automatic drop or reset.
+Run that stage and its fixed checks, then continue downstream. Each stage
+writes only its own layer and resumes from persisted Delta tables and its own
+`lab_ops.cdf_watermarks` rows: Bronze creates only missing tables, Silver and
+Gold consume the change feed after their watermarks, and the MLV stage
+recreates its views. A watermark advances only after its target write, so
+rerunning an interrupted stage is safe. Never reseed a missing watermark for
+an existing target, reset watermarks or discard history. A malformed raw
+Bronze table may be dropped only with explicit instructor approval, and only
+before the change file has landed. Unavailable CDF history needs an explicit
+instructor repair decision, not an automatic reset.
 
 ## Stop on time
 
@@ -58,7 +63,8 @@ lineage evidence, and label any incomplete stage. Keep completed work and
 stop Spark sessions you started.
 
 After a complete build, pipeline replay must preserve customer history,
-surrogate keys, facts and watermark values. Compare
-`bootcamp_snapshot(spark)` before and after replay, not only row counts.
+surrogate keys, facts and watermark values. Each stage's fixed check compares
+`bootcamp_snapshot(spark, "<layer>")` before and after rerunning its
+processor, not only row counts.
 
 [Back to the lab overview](../../README.md).

@@ -27,12 +27,14 @@ transformations. If a business rule or target is unclear, stop and ask.
 - Use only that target. Never create/delete workspaces, resize/resume/pause
   capacities, change permissions, or touch another participant's resources.
 - After setup approval, the initial Lab 1 prompt may create schema-enabled
-  `lh_bootcamp`, upload the six CSVs, deploy four bound empty stage notebooks
-  and wire the serial pipeline. Reconcile this setup's items on retry, skip
-  identical uploads and stop on conflicts; never duplicate or reset resources.
-  Obtain separate code approval before transformations. Table writes stay in `bronze`,
-  `silver`, `gold` and `lab_ops`, and only on objects named in the spec.
-- Keep OneLake CSVs immutable. Raw Bronze snapshots initialize once and
+  `lh_bootcamp`, upload the five initial CSVs, deploy four bound empty layer
+  notebooks and wire the serial pipeline. Lab 4 uploads the customer change
+  CSV. Reconcile this setup's items on retry, skip identical uploads and stop
+  on conflicts; never duplicate or reset resources. Obtain separate code
+  approval before transformations. Table writes stay in `bronze`, `silver`,
+  `gold` and `lab_ops`, and only on tables and materialized views named in
+  the spec.
+- Keep OneLake CSVs immutable. Raw Bronze tables initialize once and
   preserve source values as strings plus audit columns.
 - Run one workload at a time on F2. Check for an existing job before
   submission; monitor accepted jobs rather than submitting duplicates.
@@ -45,6 +47,13 @@ transformations. If a business rule or target is unclear, stop and ask.
 
 ## Data contracts
 
+- Keep layers separate: `nb_bootcamp_bronze`, `nb_bootcamp_silver`,
+  `nb_bootcamp_gold` and `nb_bootcamp_mlv` each contain only their own
+  layer's code and write only that layer, plus their own `lab_ops`
+  watermark rows. Silver consumes the Bronze change feed, Gold consumes the
+  Silver change feed, and the MLVs read Silver.
+- Start every notebook, cell and function with a short comment header or
+  docstring that says what it does.
 - Use exact spec columns, types, keys and grains. No extra quarantine or
   data-quality repair rules are part of this clean-data exercise.
 - Preserve SCD2 history, surrogate keys and the initial fact snapshot.
@@ -52,7 +61,7 @@ transformations. If a business rule or target is unclear, stop and ask.
   advancing watermarks. Missing history or a missing watermark on an
   existing target is an error, never a reason to skip changes.
 - Replays must preserve results. Do not generate no-op commits on CDF
-  sources by rewriting raw snapshots or resetting properties.
+  sources by rewriting raw tables or resetting properties.
 - Keep `labs/bootcamp/validate-lakehouse.py`, the source CSVs and final
   fixed-check cells unchanged. Repair the generated implementation, not
   the specification or expected results, to obtain a pass.

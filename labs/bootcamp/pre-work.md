@@ -2,8 +2,8 @@
 
 Prepare tools and access before the session. Begin the live build with an
 **empty workspace** and a dedicated active F2 capacity already assigned.
-Lab 1 creates the lakehouse, stages CSVs and provisions shells/pipeline;
-setup and cold Spark startup count inside the 45-minute build.
+Lab 1 creates the lakehouse, stages the five initial CSVs and provisions
+shells/pipeline; setup and cold Spark startup count inside the 45-minute build.
 
 ## 1. Check tools and access
 
@@ -49,9 +49,10 @@ assignment and Active status, your identity and permission to create items.
 Ask the instructor to confirm that the capacity is dedicated to your workspace
 and that the runtime supports MLVs. Do not test access by creating items.
 
-Check that the workspace is empty and the six local [CSV files](../../data/bootcamp/)
-are present. If the workspace contains another build, stop and ask the
-instructor for the correct target. Do not delete, reset or overwrite anything.
+Check that the workspace is empty and the local [CSV files](../../data/bootcamp/)
+(five initial files and one change file) are present. If the workspace
+contains another build, stop and ask the instructor for the correct target.
+Do not delete, reset or overwrite anything.
 
 Do not create a lakehouse, upload CSVs, provision notebooks/pipelines, create
 tables or start Spark during pre-work. Do not load prepared transformations.
@@ -64,7 +65,8 @@ four empty notebook shells.
 - GitHub Copilot, `spark-cli`, Python and Azure CLI are available; sign-in works.
 - Correct identity and assigned **empty workspace**, with its dedicated F2
   capacity already assigned and Active.
-- All six CSVs exist locally under `data/bootcamp/`; no upload is required yet.
+- The five initial CSVs and the change CSV exist locally under
+  `data/bootcamp/`; no upload is required yet.
 - No lakehouse, notebooks, pipeline, data tables or Spark session exist yet.
 
 If anything is blocked, ask the instructor before starting. Do not change

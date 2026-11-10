@@ -4,11 +4,13 @@
 45-minute hands-on lab.**
 
 Start from an **empty workspace with a dedicated capacity already assigned**.
-The initial prompt creates `lh_bootcamp`, lands six synthetic CSVs in OneLake
-and wires the notebooks/pipeline. Use GitHub Copilot to design, generate and
-build Bronze, Silver and Gold data products. Learn Type 2 slowly changing dimensions (SCD2), Delta Change Data
-Feed (CDF), durable watermarks and materialized lake views (MLVs).
-You approve each implementation; fixed checks verify the results.
+The initial prompt creates `lh_bootcamp`, lands five initial synthetic CSVs
+and wires four notebooks and a pipeline. With GitHub Copilot you build one
+notebook per layer: Bronze, Silver from the Bronze change feed, Gold from
+the Silver change feed, and materialized lake views (MLVs) over Silver.
+Lab 4 lands a customer change batch and runs the pipeline once. Learn Type 2
+slowly changing dimensions (SCD2), Delta Change Data Feed (CDF) and durable
+watermarks. You approve each implementation; fixed checks verify results.
 
 ## Get started
 
@@ -23,7 +25,7 @@ az login
 copilot
 ```
 
-In Copilot, install the public Fabric skills if not already available:
+In Copilot, install the public Fabric skills if missing:
 
 ```text
 /plugin marketplace add microsoft/skills-for-fabric
@@ -32,51 +34,49 @@ In Copilot, install the public Fabric skills if not already available:
 
 Restart Copilot after installation. Complete the [pre-work](labs/bootcamp/pre-work.md)
 **before the session**: tools, sign-in, access and local [starter CSVs](data/bootcamp/).
-Do not create a lakehouse, upload files, provision notebooks/pipelines or warm
-Spark yet. [Lab 1's initial prompt](labs/bootcamp/01-bronze.md) performs
-[setup](labs/bootcamp/setup.md) with Fabric skills/CLI after approval, then
-generates Bronze code for separate approval. Setup and cold startup are
-included in the live time box.
+Create nothing in Fabric yet. [Lab 1's initial prompt](labs/bootcamp/01-bronze.md)
+performs [setup](labs/bootcamp/setup.md) after approval, then generates
+Bronze code for separate approval. Setup and cold Spark startup count in the
+time box.
 
 Read the [specification](specs/bootcamp-lakehouse.spec.md) and
-[Copilot guardrails](.github/copilot-instructions.md). Start Lab 1 only when
-the pre-work ready check passes.
+[Copilot guardrails](.github/copilot-instructions.md).
 
 ## Follow the labs in order
 
 For each lab: **plan -> generate -> review and approve -> run -> check**.
-Lab 1 first creates the lakehouse and supporting items. Use each lab's
-copyable prompt, replace only the notebook's implementation
-placeholder, and retain the fixed validator and final check. Capture actual
-output; generated code or an accepted job is not a successful run.
+Each notebook contains only its own layer's code, and every notebook, cell
+and function starts with a short comment. Replace only the implementation
+placeholder; keep the fixed validator and final check. Generated code or an
+accepted job is not a successful run.
 
-| Lab | Time | Build | Definition of done |
+| Minutes | Lab | Build | Definition of done |
 |---|---|---|---|
-| [1. Setup + Bronze](labs/bootcamp/01-bronze.md) | 10 min | Lakehouse, CSVs, bound shells/pipeline; raw Delta and customer state | Setup verified; `bronze` PASS: source strings/audit intact; counts 6/4/2/7/9/3; customer state has CDF; ingestion replay is safe. |
-| [2. Silver + SCD2](labs/bootcamp/02-silver-scd2.md) | 12 min | Typed tables and customer history | `silver` PASS: exact types/values, six initial customer versions with unique keys and validity bounds, CDF enabled, bootstrap watermark recorded. |
-| [3. Gold + CDF](labs/bootcamp/03-gold-cdf.md) | 15 min | Star schema and both incremental processors | `gold` then `cdf` PASS: 9 facts; 8 customer-history rows in Silver and Gold; update/insert/delete correct; bounded CDF reads shown; watermarks current; replay preserves data and keys. |
-| [4. Materialized lake view](labs/bootcamp/04-materialized-view.md) | 8 min | Daily sales by date/store/channel | `mlv` PASS: a real MLV with 7 groups, 9 sales lines, 16 units and 516.73 net sales; every group reconciles; inspect DDL, FAIL constraints and lineage. |
+| 0-15 | Introduction | Skills, design loop, medallion, SCD2, CDF, MLVs | Architecture and boundaries are clear. |
+| 15-25 | [1. Setup + Bronze](labs/bootcamp/01-bronze.md) | Lakehouse, five CSVs, bound shells/pipeline; raw Delta with CDF and customer state | Setup verified; `bronze` initial-load PASS: source strings/audit intact; counts 6/4/2/7/9; rerun is a no-op. |
+| 25-36 | [2. Silver + SCD2](labs/bootcamp/02-silver-scd2.md) | Typed tables and customer history from the Bronze change feed | `silver` PASS: exact types/values, six customer versions with unique keys, CDF enabled, five watermarks; rerun is a no-op. |
+| 36-48 | [3. Gold from CDF](labs/bootcamp/03-gold-cdf.md) | Documented star schema from the Silver change feed | `gold` PASS: 9 facts, 16 units, 516.73 net sales; keys resolve; ten watermarks current; rerun is a no-op. |
+| 48-60 | [4. MLVs + changes](labs/bootcamp/04-materialized-view.md) | `gold.sales_daily` and `gold.customer_current` over Silver; land the change batch; run the pipeline once | `mlv` PASS: views reconcile with FAIL constraints; every stage reports the change-batch PASS; reruns remain no-ops. |
 
 Use one Spark workload at a time. Run each notebook as it becomes ready;
-the serial pipeline is for replay **after all four notebooks are implemented**.
-Do not run it against unfinished shells.
+run the pipeline only **after all four notebooks are implemented**.
 
 ## Finish
 
-Show the daily-sales query, C003's two customer versions, both watermarks and
-your validation output. Explain why October sales retain their original
-customer version after the November change.
+Show the daily-sales query, C003's expired and current versions, C002's
+retained history, the watermarks and your validation output. Explain why
+October sales keep their original customer version after the November change.
 
-Stop the live build after 45 minutes. Keep your notebooks and outputs, and
-stop Spark sessions you started. If blocked, follow [repair and recovery](labs/bootcamp/recovery.md);
-mark supplied or incomplete stages honestly. Never change the fixtures or
-checks to force a pass.
+Stop the live build after 45 minutes. Keep notebooks and outputs, and stop
+Spark sessions you started. If blocked, follow [repair and recovery](labs/bootcamp/recovery.md);
+label supplied or incomplete stages. Never change fixtures or checks to force
+a pass.
 
 ## Optional labs after the session
 
 | Lab | Definition of done |
 |---|---|
-| [5. Project Osmos](labs/bootcamp/05-osmos-replay.md) | In a fresh approved target, the same contracts, SCD2/CDF replay and real MLV checks pass; retain actual task output. |
+| [5. Project Osmos](labs/bootcamp/05-osmos-replay.md) | In a fresh approved target, the same contracts, change batch and both real MLV checks pass; retain actual task output. |
 | [6. Semantic model + Fabric IQ](labs/bootcamp/06-semantic-model-fabric-iq.md) | Approve the AI-proposed model/measures, deploy and refresh it, then execute queries whose totals and daily groups reconcile to Gold. |
 
 Keep source files immutable. Use only your confirmed workspace and lakehouse;

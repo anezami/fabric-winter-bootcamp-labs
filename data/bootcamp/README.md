@@ -2,7 +2,8 @@
 
 These are hand-authored synthetic Zava DIY retail records. Names and email
 addresses are fictional; addresses use the reserved `example.test` domain.
-All rows are intentionally valid. Keep the uploaded files unchanged.
+All rows are intentionally valid. Lab 1 uploads the five initial files; Lab 4
+uploads the change file. Keep the uploaded files unchanged.
 
 | Local file | Rows | OneLake destination |
 |---|---|---|
