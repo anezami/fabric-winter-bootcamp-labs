@@ -77,7 +77,7 @@ transformations. If a business rule or target is unclear, stop and ask.
 ## Timing and optional work
 
 The four live labs have a hard 45-minute limit, including setup and cold Spark
-startup in Lab 1's 10-minute slot. Use
+startup in Lab 1's 13-minute slot. Use
 `labs/bootcamp/recovery.md` if blocked; distinguish generated, supplied and
 incomplete stages. Supplied code is not evidence of live generation.
 

@@ -1,6 +1,6 @@
 # Lab 3: Gold from the Silver change feed
 
-**9 minutes.** Prerequisite: Lab 2 passes.
+**8 minutes.** Prerequisite: Lab 2 passes.
 
 Open `nb_bootcamp_gold`. It reads only Silver; session variables and
 temporary views do not carry over from other notebooks, so declare what you
@@ -19,7 +19,9 @@ lab_ops.cdf_watermarks rows. Follow the Native Spark SQL rules in section 3:
 - For each Silver source, declare session variables for the version range
   (from = watermark + 1, or 0 on the first run; to = the source's latest
   change version), read table_changes() through to, ignore update_preimage
-  and write that subquery inline in every statement that reads it.
+  and write that subquery inline in every statement that reads it, including
+  each MERGE's USING (...): a MERGE cannot read a temporary view over a Delta
+  table.
 - dim_customer, dim_product and dim_store apply the latest change per key
   with a keyed MERGE (dim_customer keyed on customer_sk); dim_date adds the
   missing days between the first and last order date.
@@ -43,7 +45,7 @@ watermark ordering. Review every cell: each generated cell is `%%sql` with a
 Bronze and contains no Silver-building or MLV code; the fixed baseline and
 check cells are Gold-specific too. Use
 [Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
-run this notebook twice, or run approved cells manually.
+run this notebook once, or run approved cells manually.
 
 ## 2. Verify
 
@@ -55,8 +57,9 @@ bootcamp_begin(spark, "gold")         # fixed baseline cell, before the generate
 validate_bootcamp(spark, "gold")      # fixed check cell, after the generated cells
 ```
 
-On the second **Run all** the baseline finds Gold current, so the check
-proves that your cells committed nothing.
+If time remains, an optional second **Run all** in the warm session lets the
+baseline find Gold current, so the check proves that your cells committed
+nothing.
 
 Query the star:
 
@@ -76,8 +79,8 @@ evidence.
 ## Definition of done
 
 - Actual `PASS: bootcamp gold contract, initial load (fixed read-only checks)`
-  and `PASS: bootcamp gold was built or brought to contract by this run`;
-  the second **Run all** adds
+  and `PASS: bootcamp gold was built or brought to contract by this run`.
+  An optional second **Run all** in the warm session prints
   `PASS: bootcamp gold was already current and the rerun changed nothing`.
 - Gold dimensions equal Silver; `dim_date` covers 2026-10-10 to 2026-10-16.
 - `fact_sales` has 9 lines, 16 units and 516.73 net sales with as-of

@@ -1,6 +1,6 @@
 # Lab 1: create the lakehouse and Bronze
 
-**10 minutes.** Prerequisite: the [pre-work ready check](pre-work.md#ready-check).
+**13 minutes.** Prerequisite: the [pre-work ready check](pre-work.md#ready-check).
 
 Start Copilot from the repo root with your assigned **empty workspace** on its
 dedicated active F2 capacity. No lakehouse, uploaded files, notebooks or warm
@@ -49,7 +49,9 @@ Spark SQL rules in section 3:
   from Files/bootcamp/changes/ after customer_changes.csv has landed.
 - Create customers_current once from customers_source, with CDF enabled, and
   apply the U/I/D events to it with keyed MERGE; clauses match only rows
-  that differ.
+  that differ. Write each MERGE source inline in USING (...), as a subquery
+  or a WITH inside it: a MERGE cannot read a temporary view over a Delta
+  table (it fails with "Failed to decode multipart name").
 - A rerun without new input must commit nothing.
 Every cell starts with %%sql, then the header comment -- Stage: bronze -
 <what the cell does>, then at least one statement; a comment-only cell fails
@@ -82,8 +84,8 @@ save these NEW %%sql cells in the confirmed stage notebook, between the
 unchanged fixed baseline cell and the final fixed check cell, preserving the
 description and validator, then trigger that notebook only.
 Check for an existing job first; capture its ID and monitor it to completion
-with actual validation output. Then run the same notebook once more and
-require the rerun proof. Do not trigger the full pipeline while later
+with actual validation output. Run it once; rerun it only if I ask for the
+optional rerun proof. Do not trigger the full pipeline while later
 shells are unimplemented. Never overlap notebook/pipeline jobs or an
 interactive writer. If notebook submission is unavailable, give me the cells
 to run manually in that notebook instead; do not execute both paths.
@@ -92,16 +94,16 @@ Do not claim PASS without actual execution output.
 
 For manual execution, paste the approved cells in place of the placeholder,
 between the fixed baseline cell and the final check, and run all cells in
-order, then **Run all** a second time in the warm session. Keep code and
-output.
+order. Keep code and output. If time remains, an optional second **Run all**
+in the warm session shows the rerun proof below.
 
 ## 3. Verify
 
 The shell's fixed validator, baseline and check cells are Python because they
 read Delta history and assert exact values; they never change. The baseline
-cell records whether
-Bronze is already current, and the final check validates Bronze and, on a
-rerun, proves the generated cells committed nothing:
+cell records whether Bronze is already current, and the final check validates
+Bronze and, if you run the notebook again, proves the generated cells
+committed nothing:
 
 ```python
 bootcamp_begin(spark, "bronze")       # fixed baseline cell, before the generated cells
@@ -115,8 +117,8 @@ validate_bootcamp(spark, "bronze")    # fixed check cell, after the generated ce
   folder, four correctly bound shells with fixed checks and an unscheduled
   serial pipeline; setup IDs saved.
 - Actual `PASS: bootcamp bronze contract, initial load (fixed read-only checks)`
-  and `PASS: bootcamp bronze was built or brought to contract by this run`;
-  the second **Run all** adds
+  and `PASS: bootcamp bronze was built or brought to contract by this run`.
+  An optional second **Run all** in the warm session prints
   `PASS: bootcamp bronze was already current and the rerun changed nothing`.
 - Five raw tables: 6 customers, 4 products, 2 stores, 7 orders and 9 order
   lines as strings; every source value and audit path matches.
@@ -130,6 +132,8 @@ conflicting items/files. Ask the instructor about access/capacity blocks.
 
 If a job fails, get its actual notebook exception from the run snapshot in
 Fabric Monitor. A generic job failure is not enough to diagnose it.
+`Failed to decode multipart name` means a MERGE reads a temporary view over a
+Delta table; the fix is to write that source inline in `USING (...)`.
 Follow [repair and recovery](recovery.md), without weakening the checks.
 
 **Next:** [Lab 2 - Silver and SCD2](02-silver-scd2.md).

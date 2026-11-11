@@ -1,6 +1,6 @@
 # Lab 2: Silver from the Bronze change feed
 
-**9 minutes.** Prerequisite: Lab 1 passes.
+**7 minutes.** Prerequisite: Lab 1 passes.
 
 Open `nb_bootcamp_silver`. It has its own description, validator, fixed
 baseline cell and fixed check cell; session variables and temporary views do
@@ -20,8 +20,9 @@ Follow the Native Spark SQL rules in section 3:
   for the version range (from = watermark + 1, or 0 on the first run; to =
   the source's latest change version), read table_changes() through to,
   ignore update_preimage, keep the latest change per key, apply a keyed MERGE
-  (insert, update, delete), then advance the watermark with a MERGE that
-  commits nothing when it already matches.
+  (insert, update, delete) whose source query is inline in USING (...) (a
+  MERGE cannot read a temporary view over a Delta table), then advance the
+  watermark with a MERGE that commits nothing when it already matches.
 - customer_history is SCD2 from bronze.customers_current: a MERGE closes the
   current version of each changed or deleted customer, then an INSERT opens
   the new versions; valid_from/valid_to come from effective_at; customer_sk
@@ -40,7 +41,7 @@ every cell: each generated cell is `%%sql` with a `-- Stage: silver - …`
 header, and the fixed baseline and check cells are Silver-specific too, so no
 Gold or MLV code belongs here. Use
 [Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
-run this notebook twice, or run approved cells manually.
+run this notebook once, or run approved cells manually.
 
 ## 2. Verify and explain
 
@@ -52,8 +53,9 @@ bootcamp_begin(spark, "silver")       # fixed baseline cell, before the generate
 validate_bootcamp(spark, "silver")    # fixed check cell, after the generated cells
 ```
 
-On the second **Run all** the baseline finds Silver current, so the check
-proves that your cells committed nothing.
+If time remains, an optional second **Run all** in the warm session lets the
+baseline find Silver current, so the check proves that your cells committed
+nothing.
 
 Inspect the outcome, not just the code:
 
@@ -70,8 +72,8 @@ and why facts will join on a surrogate key valid at the order timestamp.
 ## Definition of done
 
 - Actual `PASS: bootcamp silver contract, initial load (fixed read-only checks)`
-  and `PASS: bootcamp silver was built or brought to contract by this run`;
-  the second **Run all** adds
+  and `PASS: bootcamp silver was built or brought to contract by this run`.
+  An optional second **Run all** in the warm session prints
   `PASS: bootcamp silver was already current and the rerun changed nothing`.
 - Typed products, stores, orders and order lines match every source value.
 - Six customer versions have unique BIGINT keys, exact validity bounds,

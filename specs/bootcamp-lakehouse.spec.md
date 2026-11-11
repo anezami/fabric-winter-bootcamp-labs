@@ -88,17 +88,19 @@ state. The fixed baseline cell runs before the generated cells and records a
 snapshot (rows and Delta versions) of the layer only if the layer already
 satisfies the contract. The final fixed check validates the contract and, when
 a baseline was recorded, requires an identical snapshot. Run each Bronze,
-Silver and Gold notebook twice: the first run brings its layer to the
-contract, and the second run (Run all again) must report that the
-already-current layer was left unchanged.
+Silver and Gold notebook once: that run brings its layer to the contract. A
+second **Run all** in the same warm session is an optional stretch for a lab
+that has time left: it must report that the already-current layer was left
+unchanged. It is not part of any lab's definition of done, and Lab 4's
+pipeline run is the mandatory rerun, with new input.
 
 The live build is limited to 45 minutes, including lakehouse creation, CSV
-uploads, shell/pipeline provisioning and cold startup in Lab 1's 10-minute
+uploads, shell/pipeline provisioning and cold startup in Lab 1's 13-minute
 slot. If setup is blocked, ask the instructor; recovery code cannot replace
 missing resources, uploads or bindings. For a blocked implementation, follow
 [repair and recovery](../labs/bootcamp/recovery.md) and identify supplied or
 incomplete stages. Optional Labs 5 and 6 are outside this time box.
-Allocate 10/9/9/17 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
+Allocate 13/7/8/17 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
 after the initial MLV check; inspect only saved definitions and existing output
 while it runs, and query changed data after completion.
 
@@ -194,6 +196,12 @@ algorithm for multiple business events between watermarks.
     session variables: the view is created, but reading it fails with
     `UNRESOLVED_COLUMN`. Write the `table_changes()` subquery inline in every
     statement that reads it.
+  - A MERGE cannot take a temporary view over a Delta table as its source: the
+    statement fails to analyze with `Failed to decode multipart name` (a
+    temporary view over literals is fine). Write the source query inline in
+    the `USING (...)` clause, as a subquery or a `WITH` clause inside it,
+    repeating it in every MERGE that needs it. Temporary views over CSV files
+    remain fine for `CREATE TABLE ... AS SELECT` and `INSERT ... SELECT`.
   - A session variable can hold a set of keys (`DECLARE OR REPLACE VARIABLE
     v_touched ARRAY<STRING> DEFAULT ARRAY()`, filled with `SET VAR v_touched =
     (SELECT COALESCE(COLLECT_SET(key), ARRAY()) ...)`). A MERGE can then limit
@@ -400,9 +408,9 @@ instead of recreating the views.
 |---|---|
 | Pre-work | Tools and sign-in ready; assigned empty workspace with dedicated active capacity; five initial CSVs and one change CSV available locally |
 | Lab 1 setup | Approved schema-enabled lakehouse, five exact uploads, the empty `changes/` folder, four bound shells with fixed checks and an unscheduled serial pipeline; actual IDs and completion evidence |
-| Bronze | Fixed `bronze` initial-load PASS and, on the second run, an already-current layer left unchanged; source values, string types and audit lineage intact; CDF on every Bronze table |
-| Silver | Fixed `silver` initial-load PASS and, on the second run, an already-current layer left unchanged; typed values exact; six initial history versions; CDF on every Silver table; five current Bronze-to-Silver watermarks |
-| Gold | Fixed `gold` initial-load PASS and, on the second run, an already-current layer left unchanged; exact star, dates, as-of keys and facts; five current Silver-to-Gold watermarks; consumed version ranges in the generated code and watermark rows |
+| Bronze | Fixed `bronze` initial-load PASS and built-by-this-run PASS; source values, string types and audit lineage intact; CDF on every Bronze table |
+| Silver | Fixed `silver` initial-load PASS and built-by-this-run PASS; typed values exact; six initial history versions; CDF on every Silver table; five current Bronze-to-Silver watermarks |
+| Gold | Fixed `gold` initial-load PASS and built-by-this-run PASS; exact star, dates, as-of keys and facts; five current Silver-to-Gold watermarks; consumed version ranges in the generated code and watermark rows |
 | MLV | Fixed `mlv` PASS; two actual MLV definitions with FAIL constraints; all groups and totals; current customers; inspected lineage |
 | Change batch | Change CSV uploaded in Lab 4; one successful pipeline run; every stage reports the change-batch PASS |
 | Documentation | Every notebook has a markdown description and every generated cell is a `%%sql` cell with a `-- Stage: <stage> - ` header |
@@ -415,7 +423,7 @@ customer change batch (fixed read-only checks)`. The Bronze, Silver and Gold
 checks then print `PASS: bootcamp <stage> was built or brought to contract by
 this run` when their baseline found the layer not yet current, or `PASS:
 bootcamp <stage> was already current and the rerun changed nothing` when it
-did.
+did, as on an optional second **Run all** in the warm session.
 
 After the change batch and one pipeline run, C003 has an expired and a
 current version (Amsterdam, Gold), C007 has one current version and C002 has

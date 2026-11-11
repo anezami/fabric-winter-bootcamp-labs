@@ -3,7 +3,7 @@
 The [initial Lab 1 prompt](01-bronze.md) performs this procedure after setup
 approval. Start from the assigned empty workspace; its dedicated F2 capacity
 is already assigned and Active. Do not perform these writes during pre-work.
-Setup and cold Spark startup count inside Lab 1's 10-minute slot.
+Setup and cold Spark startup count inside Lab 1's 13-minute slot.
 
 ## 1. Discover, plan and approve
 
@@ -142,12 +142,13 @@ Every stage declares its own session variables and temporary views and reads
 persisted Delta state and watermarks; no session state carries between
 notebooks. The fixed checks find the expected state from the landed files: the
 initial load until `Files/bootcamp/changes/customer_changes.csv` exists, then
-the changed state. You run each Bronze, Silver and Gold notebook twice in
+the changed state. You run each Bronze, Silver and Gold notebook once in
 Labs 1-3: the fixed baseline cell records whether its layer is already
-current, and when it is, the final check requires an identical snapshot after
-your generated cells rerun, which proves they commit nothing. On failure,
-repair the generated code and rerun that notebook; never reset tables or
-watermarks to make a check pass.
+current, and when it is (for example on an optional second **Run all** in the
+warm session), the final check requires an identical snapshot after your
+generated cells rerun, which proves they commit nothing. On failure, repair
+the generated code and rerun that notebook; never reset tables or watermarks
+to make a check pass.
 
 For an approved update to an existing notebook, pass only the emitted
 `definition` object to `updateDefinition`, not the complete create request.

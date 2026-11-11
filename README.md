@@ -53,9 +53,9 @@ Generated code or an accepted job is not a successful run.
 | Minutes | Lab | Build | Definition of done |
 |---|---|---|---|
 | 0-15 | Introduction | Skills, design loop, medallion, SCD2, CDF, MLVs | Architecture and boundaries are clear. |
-| 15-25 | [1. Setup + Bronze](labs/bootcamp/01-bronze.md) | Lakehouse, five CSVs, bound shells/pipeline; raw Delta with CDF and customer state | Setup verified; `bronze` initial-load PASS: source strings/audit intact; counts 6/4/2/7/9; second run changes nothing. |
-| 25-34 | [2. Silver + SCD2](labs/bootcamp/02-silver-scd2.md) | Typed tables and customer history from the Bronze change feed | `silver` PASS: exact types/values, six customer versions with unique keys, CDF enabled, five watermarks; second run changes nothing. |
-| 34-43 | [3. Gold from CDF](labs/bootcamp/03-gold-cdf.md) | Documented star schema from the Silver change feed | `gold` PASS: 9 facts, 16 units, 516.73 net sales; keys resolve; five Gold watermarks current; second run changes nothing. |
+| 15-28 | [1. Setup + Bronze](labs/bootcamp/01-bronze.md) | Lakehouse, five CSVs, bound shells/pipeline; raw Delta with CDF and customer state | Setup verified; `bronze` initial-load PASS: source strings/audit intact; counts 6/4/2/7/9. |
+| 28-35 | [2. Silver + SCD2](labs/bootcamp/02-silver-scd2.md) | Typed tables and customer history from the Bronze change feed | `silver` PASS: exact types/values, six customer versions with unique keys, CDF enabled, five watermarks. |
+| 35-43 | [3. Gold from CDF](labs/bootcamp/03-gold-cdf.md) | Documented star schema from the Silver change feed | `gold` PASS: 9 facts, 16 units, 516.73 net sales; keys resolve; five Gold watermarks current. |
 | 43-60 | [4. MLVs + changes](labs/bootcamp/04-materialized-view.md) | `gold.sales_daily` and `gold.customer_current` over Silver; land the change batch; run the pipeline once | `mlv` PASS: views reconcile with FAIL constraints; every stage reports the change-batch PASS. |
 
 Use one Spark workload at a time. Run each notebook as it becomes ready;
