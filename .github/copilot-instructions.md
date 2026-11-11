@@ -38,7 +38,8 @@ transformations. If a business rule or target is unclear, stop and ask.
   preserve source values as strings plus audit columns.
 - Run one workload at a time on F2. Check for an existing job before
   submission; monitor accepted jobs rather than submitting duplicates.
-  Notebook jobs have independent contexts, not shared Python globals.
+  Notebook jobs have independent contexts: session variables and temporary
+  views do not survive between notebooks.
 - Stop sessions you started when finished. Do not reset a lakehouse or drop
   tables to hide a failed check; request an explicit scoped repair decision.
 - Use the public Skills for Fabric, including `spark-cli`, rather than
@@ -52,8 +53,11 @@ transformations. If a business rule or target is unclear, stop and ask.
   layer's code and write only that layer, plus their own `lab_ops`
   watermark rows. Silver consumes the Bronze change feed, Gold consumes the
   Silver change feed, and the MLVs read Silver.
-- Start every notebook, cell and function with a short comment header or
-  docstring that says what it does.
+- Write generated layer code as native Spark SQL: every generated cell is a
+  `%%sql` cell that starts with a `-- Stage: <stage> - <what it does>`
+  comment and holds at least one statement. Use PySpark only where Spark SQL
+  cannot do a step, and state the reason. The fixed validator, baseline and
+  check cells are the only Python; never edit them.
 - Use exact spec columns, types, keys and grains. No extra quarantine or
   data-quality repair rules are part of this clean-data exercise.
 - Preserve SCD2 history, surrogate keys and the initial fact snapshot.
@@ -62,9 +66,10 @@ transformations. If a business rule or target is unclear, stop and ask.
   existing target is an error, never a reason to skip changes.
 - Replays must preserve results. Do not generate no-op commits on CDF
   sources by rewriting raw tables or resetting properties.
-- Keep `labs/bootcamp/validate-lakehouse.py`, the source CSVs and final
-  fixed-check cells unchanged. Repair the generated implementation, not
-  the specification or expected results, to obtain a pass.
+- Keep `labs/bootcamp/validate-lakehouse.py`, the source CSVs and the fixed
+  validator, baseline and check cells unchanged. Repair the generated
+  implementation, not the specification or expected results, to obtain a
+  pass.
 - Report success only after actual execution and fixed PASS output.
   Matching table values alone do not prove CDF consumption or MLV creation.
   Keep version ranges, DDL, lineage and job results as applicable.

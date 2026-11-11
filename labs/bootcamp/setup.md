@@ -44,8 +44,10 @@ Upload the five `data/bootcamp/initial/*.csv` files to
 tooling. OneLake uses the storage token audience, not the Fabric API
 audience. Verify all five paths and uploaded bytes against the local files.
 On retry, skip identical uploads; stop on a mismatch. Files are immutable
-after landing. Do not upload `data/bootcamp/changes/customer_changes.csv`
-yet: Lab 4 lands it as new data.
+after landing. Also create the empty folder `lh_bootcamp/Files/bootcamp/changes/`
+(a OneLake directory create): the Bronze Spark SQL reads that folder, and a
+missing path fails with `PATH_NOT_FOUND`. Do not upload
+`data/bootcamp/changes/customer_changes.csv` yet: Lab 4 lands it as new data.
 
 On a connection timeout, retain the lakehouse ID and check reachability using
 the skill's documented regional OneLake endpoint for the verified capacity
@@ -69,8 +71,10 @@ python labs\bootcamp\prepare-artifacts.py shells --workspace-id $workspaceId --l
 
 The output folder must be new or empty. Each `.ipynb` contains a markdown
 description, only its applicable [fixed validator](validate-lakehouse.py) sections, a
-`NotImplementedError` placeholder and the fixed stage check. No
-transformation code is supplied.
+fixed baseline cell (Bronze, Silver and Gold), a fail-fast `%%sql` placeholder
+cell (`SELECT raise_error(...)`) and the fixed stage check. No transformation
+code is supplied. The fixed validator, baseline and check cells are the only
+Python; the Spark SQL you generate later replaces the placeholder.
 
 Within the approved setup write set, create exactly `nb_bootcamp_bronze`,
 `nb_bootcamp_silver`, `nb_bootcamp_gold` and `nb_bootcamp_mlv` from the four
@@ -78,9 +82,10 @@ Within the approved setup write set, create exactly `nb_bootcamp_bronze`,
 `definition.format` set to `ipynb`; the request's `definition` object is the
 definition, not the whole request body. Capture actual IDs, wait for completion
 and read back each definition to verify the default lakehouse, description,
-unchanged stage-specific validator, fail-fast placeholder and final fixed check.
-Review every code cell: Bronze must contain no Silver/Gold helpers, Silver no
-Gold helpers, and Gold no Bronze reads or Silver validators. Do not run the shells.
+unchanged stage-specific validator, baseline cell, fail-fast placeholder and
+final fixed check.
+Review every cell: Bronze must contain no Silver/Gold references, Silver no
+Gold references, and Gold no Bronze reads or Silver validators. Do not run the shells.
 
 Alternatively, import the four `.ipynb` files using Fabric's notebook import
 and inspect their bindings. Do not create a second set of notebooks.
@@ -122,8 +127,9 @@ locally. No data tables or transformations have run; no warm session is required
 ## 5. Generate, approve and execute
 
 Generate and approve one notebook at a time using Labs 1-4. Replace only its
-implementation placeholder, preserving the description, validator and fixed
-check cells. Save the notebook before submitting that individual notebook, or
+implementation placeholder with the approved `%%sql` cells, between the fixed
+baseline and check cells, preserving the description, validator and fixed
+cells. Save the notebook before submitting that individual notebook, or
 run its cells manually. Keep actual job IDs and check output. Never execute
 the full pipeline while later shells are unimplemented.
 
@@ -132,14 +138,16 @@ checked: Lab 4 uses one pipeline run to carry the change batch through every
 layer. A failed stage blocks downstream stages. Stop any previous writer and
 confirm it has ended before switching execution paths.
 
-Every stage reloads its own imports and helpers and reads persisted Delta
-state and watermarks; no Python state carries between notebooks. The fixed
-checks find the expected state from the landed files: the initial load until
-`Files/bootcamp/changes/customer_changes.csv` exists, then the changed state.
-Each Bronze, Silver and Gold check also reruns its processor and requires an
-identical `bootcamp_snapshot(spark, "<layer>")`. On failure, repair the
-generated code and rerun that notebook; never reset tables or watermarks to
-make a check pass.
+Every stage declares its own session variables and temporary views and reads
+persisted Delta state and watermarks; no session state carries between
+notebooks. The fixed checks find the expected state from the landed files: the
+initial load until `Files/bootcamp/changes/customer_changes.csv` exists, then
+the changed state. You run each Bronze, Silver and Gold notebook twice in
+Labs 1-3: the fixed baseline cell records whether its layer is already
+current, and when it is, the final check requires an identical snapshot after
+your generated cells rerun, which proves they commit nothing. On failure,
+repair the generated code and rerun that notebook; never reset tables or
+watermarks to make a check pass.
 
 For an approved update to an existing notebook, pass only the emitted
 `definition` object to `updateDefinition`, not the complete create request.

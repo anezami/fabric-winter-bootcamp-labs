@@ -41,9 +41,9 @@ live generation.
 
 Before using them, confirm the same identity, workspace and lakehouse, and
 stop any existing writer. Preserve your generated code/output. Replace only
-the implementation cells in the existing notebook; keep the validator,
-final checks, notebook ID and pipeline wiring. Recovery cells must include
-their own imports and helpers.
+the implementation cells in the existing notebook; keep the validator, baseline
+and check cells, notebook ID and pipeline wiring. Recovery cells declare their
+own session variables and read the persisted Delta tables.
 
 Run that stage and its fixed checks, then continue downstream. Each stage
 writes only its own layer and resumes from persisted Delta tables and its own
@@ -63,8 +63,10 @@ lineage evidence, and label any incomplete stage. Keep completed work and
 stop Spark sessions you started.
 
 After a complete build, pipeline replay must preserve customer history,
-surrogate keys, facts and watermark values. Each stage's fixed check compares
-`bootcamp_snapshot(spark, "<layer>")` before and after rerunning its
-processor, not only row counts.
+surrogate keys, facts and watermark values. In each Bronze, Silver and Gold
+notebook the fixed baseline and check cells compare the layer before and
+after a rerun, not only row counts: when the baseline finds the layer
+current, the check fails if your generated cells changed any row or Delta
+version.
 
 [Back to the lab overview](../../README.md).

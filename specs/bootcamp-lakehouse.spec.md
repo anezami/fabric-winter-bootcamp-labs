@@ -4,7 +4,7 @@
 |---|---|
 | Goal | Explain daily Zava sales by date, store and channel while retaining customer history |
 | Target | An assigned empty workspace with its dedicated active F2 capacity; create schema-enabled `lh_bootcamp` in Lab 1 |
-| Engine | Four layer notebooks (Bronze, Silver, Gold, MLV) chained by Change Data Feed, and one serial Data Pipeline |
+| Engine | Four layer notebooks (Bronze, Silver, Gold, MLV) written as native Spark SQL (`%%sql`) cells and chained by Change Data Feed, and one serial Data Pipeline |
 | Inputs | Five immutable initial CSVs (Lab 1) and one customer change CSV (Lab 4) under `Files/bootcamp/` |
 | Acceptance | Unchanged [fixed validator](../labs/bootcamp/validate-lakehouse.py) plus execution, CDF and MLV evidence |
 
@@ -25,11 +25,13 @@ The initial Lab 1 prompt confirms identity, workspace and capacity, shows the
 setup write set and waits for approval. Use Fabric skills and CLI to create
 `lh_bootcamp` with `creationPayload.enableSchemas=true`, wait for completion
 and verify schema support. Upload the five initial CSVs to the paths below,
-verifying exact bytes, then use the local builder to deploy
+verifying exact bytes, and create the empty `Files/bootcamp/changes/` folder,
+then use the local builder to deploy
 `nb_bootcamp_bronze`, `nb_bootcamp_silver`, `nb_bootcamp_gold` and
 `nb_bootcamp_mlv`. Each shell holds a markdown description, only its own
-fixed validator sections, a fail-fast implementation placeholder and an unchanged final
-check. Capture actual IDs and create their serial `pl_bootcamp_build`; do not
+fixed validator sections, a fixed baseline cell (Bronze, Silver and Gold), a
+fail-fast `%%sql` implementation placeholder and an unchanged final check.
+Capture actual IDs and create their serial `pl_bootcamp_build`; do not
 schedule it or run placeholders. See [Lab 1 setup](../labs/bootcamp/setup.md).
 
 On retry, reconcile only items from the same confirmed setup; poll accepted
@@ -41,17 +43,25 @@ Generate transformation code live. Each notebook contains only its own
 layer's code: Bronze loads CSVs into CDF-enabled Bronze tables, Silver reads
 Bronze Change Data Feed, Gold reads Silver Change Data Feed and the MLV
 notebook defines materialized lake views over Silver. Every notebook starts
-with a markdown description, every code cell starts with a `#` comment header
-and every function has a docstring. Every notebook defines its own imports
-and helpers; persistent state lives in Delta tables and watermarks.
+with a markdown description, and every generated cell starts with a
+`-- Stage: <stage> - <what the cell does>` comment header. Persistent state
+lives in Delta tables and watermarks: session variables and temporary views
+live only inside one notebook run, and nothing survives between notebooks.
 
-Layer isolation includes every cell, helper, constant and fixed check, even
-unused definitions. Bronze contains no Silver/Gold/MLV checks; Silver contains
-no Gold/MLV checks; Gold contains only star-schema logic and checks, with no
-Bronze reads. Gold reconciles against Silver rather than revalidating its
-implementation, so a successful Silver run is its prerequisite. MLV checks
-compare only the two views with Silver. Shared read-only helpers are included
-only where needed.
+All generated logic is native Spark SQL: each generated cell is a `%%sql`
+cell (the notebook's SQL language switch) holding Spark SQL statements, with
+no PySpark, no `spark.sql(...)` wrapper and no Python helper functions.
+PySpark is used only where SQL cannot do the job: the three fixed Python
+cells of each notebook (validator, baseline and stage check) need Delta
+history, Python assertions and expectations derived from the CSV files.
+
+Layer isolation includes every SQL statement, cell, helper, constant and fixed
+check, even unused definitions. Bronze contains no Silver/Gold/MLV checks;
+Silver contains no Gold/MLV checks; Gold contains only star-schema logic and
+checks, with no Bronze reads. Gold reconciles against Silver rather than
+revalidating its implementation, so a successful Silver run is its
+prerequisite. MLV checks compare only the two views with Silver. Shared
+read-only helpers are included only where needed.
 
 For each lab: propose, generate, approve, save, run and verify. Keep code,
 job status and actual check output. A submission is not completion.
@@ -66,11 +76,21 @@ layer. Use one execution path per stage: a notebook job or manual interactive
 cells, never both concurrently. Include cold Spark startup; do not assume
 session reuse.
 
-The fixed checks derive the expected state from the landed files: before
+Every SQL write is guarded so that a rerun without new input commits nothing:
+`CREATE TABLE IF NOT EXISTS`, MERGE clauses that match only rows that actually
+differ, and watermarks that skip versions already processed. The fixed checks
+derive the expected state from the landed files: before
 `Files/bootcamp/changes/customer_changes.csv` exists every layer must hold the
-initial load; afterwards every layer must hold the changed state. Each
-Bronze, Silver and Gold final check snapshots its layer, calls the layer's
-processor again and requires an identical snapshot (rows and Delta versions).
+initial load; afterwards every layer must hold the changed state.
+
+The final check cannot call generated SQL a second time, so a rerun is proved by
+state. The fixed baseline cell runs before the generated cells and records a
+snapshot (rows and Delta versions) of the layer only if the layer already
+satisfies the contract. The final fixed check validates the contract and, when
+a baseline was recorded, requires an identical snapshot. Run each Bronze,
+Silver and Gold notebook twice: the first run brings its layer to the
+contract, and the second run (Run all again) must report that the
+already-current layer was left unchanged.
 
 The live build is limited to 45 minutes, including lakehouse creation, CSV
 uploads, shell/pipeline provisioning and cold startup in Lab 1's 10-minute
@@ -85,8 +105,10 @@ while it runs, and query changed data after completion.
 ## 2. Inputs
 
 Lab 1 uploads the five initial `data/bootcamp/` CSVs into the newly created
-lakehouse before generating Bronze ingestion. Lab 4 uploads the change file,
-which represents new data arriving after the first build:
+lakehouse before generating Bronze ingestion, and creates the empty folder
+`Files/bootcamp/changes/` so that Bronze can read the change source (as zero
+rows) before the file lands. Lab 4 uploads the change file, which represents
+new data arriving after the first build:
 
 | OneLake path | Uploaded in | Grain | Rows |
 |---|---|---|---|
@@ -118,7 +140,8 @@ algorithm for multiple business events between watermarks.
 - Use only the confirmed workspace and isolated `lh_bootcamp`. Do not
   create/delete workspaces or change capacities, permissions or other resources.
 - After setup approval, the initial prompt may create `lh_bootcamp`, stage the
-  five initial CSVs and provision the four named shells and their serial
+  five initial CSVs, create the empty `Files/bootcamp/changes/` folder and
+  provision the four named shells and their serial
   pipeline. Lab 4 may upload the change CSV. The organizer supplies the empty
   workspace and its dedicated active capacity.
 - Create only the tables and views specified below in `bronze`, `silver`,
@@ -142,6 +165,48 @@ algorithm for multiple business events between watermarks.
 - Use signed-in identity, discovered IDs and runtime tokens. Never commit
   credentials, local configuration or environment-specific identifiers.
 
+### Native Spark SQL rules
+
+- Every generated cell is a `%%sql` cell. Its first line is
+  `-- Stage: <stage> - <what the cell does>`, followed by at least one
+  statement: a cell that holds only comments fails the notebook job. Statements
+  end with a semicolon and run in order; a failing statement stops its cell
+  and fails the job. Cells of one notebook share session variables
+  (`DECLARE OR REPLACE VARIABLE`, `SET VAR`) and temporary views.
+- Use PySpark only if SQL cannot express a step, and say why in the cell's
+  header comment.
+- Fabric Runtime 2.0 facts, so that generation avoids dead ends:
+  - `read_files()` is not available. Read CSV files with
+    `CREATE OR REPLACE TEMPORARY VIEW <name> USING csv OPTIONS (path
+    'Files/bootcamp/initial/<file>.csv', header 'true')`; a relative `Files/`
+    path resolves against the notebook's default lakehouse and every column is
+    a string. A missing path or a glob without a match fails with
+    `PATH_NOT_FOUND`, and an existing empty folder reads only with an explicit
+    column list.
+  - `table_changes('<table>', <start>, <end>)` takes literals and session
+    variables, not subqueries (`DELTA_CDC_NON_CONSTANT_ARGUMENT`), and fails
+    with `DELTA_CDC_START_VERSION_AFTER_LATEST` when `<start>` is beyond the
+    latest change. Read the latest change version into a variable first
+    (`SELECT COALESCE(MAX(_commit_version), 0) FROM table_changes('<table>', 0)`),
+    then read from `LEAST(<from>, <to>)` and keep rows with
+    `_commit_version >= <from>`.
+  - A temporary view cannot wrap `table_changes()` calls whose arguments are
+    session variables: the view is created, but reading it fails with
+    `UNRESOLVED_COLUMN`. Write the `table_changes()` subquery inline in every
+    statement that reads it.
+  - A session variable can hold a set of keys (`DECLARE OR REPLACE VARIABLE
+    v_touched ARRAY<STRING> DEFAULT ARRAY()`, filled with `SET VAR v_touched =
+    (SELECT COALESCE(COLLECT_SET(key), ARRAY()) ...)`). A MERGE can then limit
+    both its source (`WHERE array_contains(v_touched, key)`) and its
+    `WHEN NOT MATCHED BY SOURCE AND array_contains(v_touched, t.key) THEN
+    DELETE` clause to those keys.
+  - `DELETE ... WHERE key IN (subquery)` is rejected (`DELTA_UNSUPPORTED_SUBQUERY`);
+    remove keyed rows with `MERGE ... WHEN MATCHED THEN DELETE` (or
+    `WHEN NOT MATCHED BY SOURCE ... THEN DELETE`).
+  - An empty MERGE, an `INSERT` of zero rows and `CREATE TABLE IF NOT EXISTS`
+    on an existing table commit nothing; `DESCRIBE HISTORY` cannot be used as
+    a subquery.
+
 ## 4. Bronze
 
 Create these Delta tables in `bronze`, all with CDF enabled
@@ -149,8 +214,11 @@ Create these Delta tables in `bronze`, all with CDF enabled
 
 - Raw string snapshots `customers_source`, `products`, `stores`, `orders`
   and `order_lines`, from the five initial CSVs.
-- `customer_changes_source`: the raw change events, created only once
-  `Files/bootcamp/changes/customer_changes.csv` has landed.
+- `customer_changes_source`: the raw change events (`operation`,
+  `customer_id`, `full_name`, `email`, `city`, `loyalty_tier` and
+  `effective_at` as strings, plus the audit columns). The first Bronze run
+  creates it empty; it is loaded once, from
+  `Files/bootcamp/changes/customer_changes.csv`, after that file has landed.
 - `customers_current`: keyed current-state table initialized from
   `customers_source`, with the same string columns and audit columns.
 
@@ -163,22 +231,28 @@ in section 3, with exactly these audit columns added:
 | `_source_file` | STRING | clean file path ending in the corresponding CSV path |
 | `_batch_id` | STRING | populated batch identifier |
 
-Use the file source's `_metadata.file_path` for clean lineage. On Fabric
-Runtime 2.0, `input_file_name()` can include query suffixes that fail this
-contract.
+`_source_file` is the clean OneLake file path ending in the corresponding CSV
+path. On Fabric Runtime 2.0 `input_file_name()` appends `?version=` and
+`?flength=` suffixes that fail this contract, so strip them with
+`regexp_replace(input_file_name(), '[?].*$', '')`; `_metadata.file_path` is
+not exposed by a `USING csv` temporary view.
 
-Expose `load_bronze()` with no arguments. Raw tables are created once and
-never rewritten; `customers_current` is the only mutable Bronze table.
+Write Bronze as Spark SQL cells. Raw tables are created once with
+`CREATE TABLE IF NOT EXISTS ... AS SELECT` from a CSV temporary view and never
+rewritten; `customers_current` is the only mutable Bronze table. One
+`v_batch_id` session variable (`uuid()`) labels a run, and the events table is
+loaded once with an `INSERT ... WHERE NOT EXISTS` guard.
 Rerunning ingestion must not duplicate rows, replace raw snapshots, reset
-changed state or re-enable properties that create new commits. Validate
-existing tables rather than silently accepting an incompatible shape.
+changed state or re-enable properties that create new commits. The fixed
+check, not the generated SQL, validates the shape of existing tables.
 
 When the change file is present, apply it to `customers_current` with keyed
 MERGE: `U` updates the row, `I` inserts it and `D` removes it. Stamp the D
-event's `effective_at` before removing its state row so its delete image keeps
-the business boundary, and remove it with `MERGE ... WHEN MATCHED THEN
-DELETE`: Fabric Delta rejects subqueries in a `DELETE` condition. Skip the
-MERGE when the table already matches the events, so a rerun commits nothing.
+event's `effective_at` onto its state row in one MERGE, so its delete image
+keeps the business boundary, and remove the row in a second `MERGE ... WHEN
+MATCHED THEN DELETE`: Fabric Delta rejects subqueries in a `DELETE` condition.
+MERGE clauses match only rows that differ from the events, so a rerun commits
+nothing.
 
 ## 5. Silver and SCD2
 
@@ -194,12 +268,14 @@ Create these typed Delta tables in `silver`, all with CDF enabled:
 Prices are DECIMAL(18,2); `line_number` and `quantity` are INT; `discount`
 is DECIMAL(6,4); `order_ts` is TIMESTAMP. Other source attributes are STRING.
 
-Expose `process_bronze_to_silver()` with no arguments. Silver reads only
-Bronze Change Data Feed: `products`, `stores`, `orders` and `order_lines`
+Write Silver as Spark SQL cells. Silver reads only Bronze Change Data Feed
+through `table_changes()`: `products`, `stores`, `orders` and `order_lines`
 feed the four typed tables, and `customers_current` feeds `customer_history`.
 Apply inserts, updates and deletes with a keyed MERGE.
 
-`customer_history` is a Type 2 dimension. Use BIGINT for surrogate keys and
+`customer_history` is a Type 2 dimension, written as a MERGE that closes the
+current version of each changed or deleted customer followed by an INSERT of
+the new versions. Use BIGINT for surrogate keys and
 source versions, TIMESTAMP for validity bounds, BOOLEAN for `is_current`, and
 STRING for customer attributes. `customer_sk` is unique and non-null; each
 customer has at most one current version. Use `9999-12-31 00:00:00` as the
@@ -243,7 +319,7 @@ as `quantity * unit_price * (1 - discount)`, rounded HALF_UP to two decimals
 per line. Keep exactly nine facts, totalling 16 units and 516.73 net sales.
 Add table descriptions and column comments to Gold.
 
-Expose `process_silver_to_gold()` with no arguments. Gold uses Silver Change
+Write Gold as Spark SQL cells. Gold uses Silver Change
 Data Feed to identify changed keys and current Silver rows to assemble affected
 facts and the date range. It never reads Bronze or builds Silver.
 Dimensions apply the latest change per key with a keyed
@@ -253,13 +329,13 @@ deleted from Silver.
 
 ### CDF and watermarks
 
-Every Silver and Gold processor follows the same incremental contract. Read
+Every Silver and Gold SQL stage follows the same incremental contract. Read
 the source's change feed from the version after the watermark (version 0 on
-the first run) through a captured current version, ignore `update_preimage`,
-keep the latest change per key, apply an idempotent keyed MERGE, and advance
-the watermark only after the target write succeeds. Stop on unavailable
-history; do not skip a CDF gap by advancing a watermark. A run without new
-source versions commits nothing.
+the first run) through the source's latest change version, ignore
+`update_preimage`, keep the latest change per key, apply an idempotent keyed
+MERGE, and advance the watermark only after the target write succeeds. Stop on
+unavailable history; do not skip a CDF gap by advancing a watermark. A run
+without new source versions commits nothing.
 
 Store exactly one row per source/target pair in:
 
@@ -276,10 +352,12 @@ Silver owns five pairs: `bronze.products`, `bronze.stores`, `bronze.orders`,
 Gold owns five pairs: `silver.customer_history`, `silver.dim_product` and
 `silver.dim_store` to their Gold copies, and `silver.orders` and
 `silver.order_lines` to `gold.fact_sales`. After each layer's run its
-watermarks equal the current source versions.
+watermarks equal the latest change version of their source: the highest
+`_commit_version` returned by `table_changes('<source>', 0)`.
 
-Print the actual consumed version ranges. Matching output values alone do
-not prove use of CDF.
+Keep the actual consumed version ranges (the watermark rows and the
+`table_changes()` bounds in the generated code) as evidence. Matching output
+values alone do not prove use of CDF.
 
 After the change batch there are six current Bronze customers, eight Silver
 history rows (six current, two expired), and the same eight rows in Gold.
@@ -321,20 +399,23 @@ instead of recreating the views.
 | Checkpoint | Required evidence |
 |---|---|
 | Pre-work | Tools and sign-in ready; assigned empty workspace with dedicated active capacity; five initial CSVs and one change CSV available locally |
-| Lab 1 setup | Approved schema-enabled lakehouse, five exact uploads, four bound shells with fixed checks and an unscheduled serial pipeline; actual IDs and completion evidence |
-| Bronze | Fixed `bronze` initial-load PASS and rerun no-op; source values, string types and audit lineage intact; CDF on every Bronze table |
-| Silver | Fixed `silver` initial-load PASS and rerun no-op; typed values exact; six initial history versions; CDF on every Silver table; five current Bronze-to-Silver watermarks |
-| Gold | Fixed `gold` initial-load PASS and rerun no-op; exact star, dates, as-of keys and facts; five current Silver-to-Gold watermarks; printed version ranges |
+| Lab 1 setup | Approved schema-enabled lakehouse, five exact uploads, the empty `changes/` folder, four bound shells with fixed checks and an unscheduled serial pipeline; actual IDs and completion evidence |
+| Bronze | Fixed `bronze` initial-load PASS and, on the second run, an already-current layer left unchanged; source values, string types and audit lineage intact; CDF on every Bronze table |
+| Silver | Fixed `silver` initial-load PASS and, on the second run, an already-current layer left unchanged; typed values exact; six initial history versions; CDF on every Silver table; five current Bronze-to-Silver watermarks |
+| Gold | Fixed `gold` initial-load PASS and, on the second run, an already-current layer left unchanged; exact star, dates, as-of keys and facts; five current Silver-to-Gold watermarks; consumed version ranges in the generated code and watermark rows |
 | MLV | Fixed `mlv` PASS; two actual MLV definitions with FAIL constraints; all groups and totals; current customers; inspected lineage |
-| Change batch | Change CSV uploaded in Lab 4; one successful pipeline run; every stage reports the change-batch PASS and reruns stay no-ops |
-| Documentation | Every notebook has a markdown description, every code cell a `#` comment header and every function a docstring |
-| Layer isolation | Every exported cell contains only its stage's logic and applicable fixed checks, including unused definitions |
+| Change batch | Change CSV uploaded in Lab 4; one successful pipeline run; every stage reports the change-batch PASS |
+| Documentation | Every notebook has a markdown description and every generated cell is a `%%sql` cell with a `-- Stage: <stage> - ` header |
+| Layer isolation | Every exported cell contains only its stage's logic and applicable fixed checks, including unused definitions; only the fixed validator, baseline and check cells are Python |
 
 Run the fixed checks in each notebook context. They detect whether the
 change file has landed and print `PASS: bootcamp <stage> contract, initial
 load (fixed read-only checks)` or `PASS: bootcamp <stage> contract, after the
 customer change batch (fixed read-only checks)`. The Bronze, Silver and Gold
-checks then print `PASS: <stage> rerun is a no-op`.
+checks then print `PASS: bootcamp <stage> was built or brought to contract by
+this run` when their baseline found the layer not yet current, or `PASS:
+bootcamp <stage> was already current and the rerun changed nothing` when it
+did.
 
 After the change batch and one pipeline run, C003 has an expired and a
 current version (Amsterdam, Gold), C007 has one current version and C002 has
@@ -343,7 +424,8 @@ and `gold.dim_customer`; `gold.customer_current` has six rows. A partial change 
 is not a valid checkpoint: repair and rerun the failing notebook, which
 resumes from its persisted watermarks.
 
-Idempotence means unchanged results: rerunning any processor without new
+Idempotence means unchanged results: rerunning any Bronze, Silver or Gold
+notebook without new
 input leaves rows and Delta versions unchanged. Do not manufacture commits on
 CDF sources. A table holding the right values is not proof of MLV creation,
 nor are matching targets proof of CDF consumption.

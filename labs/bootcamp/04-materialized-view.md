@@ -2,7 +2,7 @@
 
 **17 minutes.** Prerequisite: Labs 1-3 pass.
 
-Open `nb_bootcamp_mlv`. Its description, validator and fixed check are
+Open `nb_bootcamp_mlv`. Its description, validator and fixed check cell are
 already present. The goal is two real Fabric materialized lake views over
 Silver, not merely queries returning the same numbers. Then a customer change
 file arrives and one pipeline run carries it through every layer.
@@ -12,25 +12,28 @@ file arrives and one pipeline run carries it through every layer.
 ```text
 Use spark-cli and section 7 of specs/bootcamp-lakehouse.spec.md.
 Save a short MLV plan and numbered tasks under specs/plans/. Generate NEW
-Spark SQL for nb_bootcamp_mlv that reads only silver and defines
-gold.sales_daily and gold.customer_current with CREATE OR REPLACE
+Spark SQL for nb_bootcamp_mlv as %%sql cells that read only silver and
+define gold.sales_daily and gold.customer_current with CREATE OR REPLACE
 MATERIALIZED LAKE VIEW, not tables or ordinary views. Implement the exact
-grouping, columns/types and ON MISMATCH FAIL constraints. Start the cell with
-a # comment header and comment each view. Replace only the placeholder; do not
-copy supplied transformations or edit the spec, CSVs or validator. Do not
+grouping, columns/types and ON MISMATCH FAIL constraints. Every cell starts
+with %%sql, then -- Stage: mlv - <what the cell does>, then at least one
+statement; comment each view in its header. Replace only the placeholder; do
+not copy supplied transformations or edit the spec, CSVs or validator. Do not
 claim incremental refresh without Fabric run evidence. Show the code and
 write set, explain explicit CDF versus Fabric-managed refresh, then stop for
 my approval.
 ```
 
 Approve, save and execute using
-[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code), or run the
-approved cells manually. Do not overlap execution paths.
+[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code), but run
+this notebook only once: the views are replaced on every run, so there is no
+rerun proof. Or run the approved cells manually. Do not overlap execution
+paths.
 
-The unchanged final check runs:
+The shell's fixed check cell runs after your generated cells:
 
 ```python
-validate_bootcamp(spark, "mlv")
+validate_bootcamp(spark, "mlv")       # fixed check cell, after the generated cells
 ```
 
 It reconciles **every group and value** of `gold.sales_daily` and every row
@@ -49,9 +52,12 @@ no job is running and trigger pl_bootcamp_build once. Monitor it to
 completion and report each notebook's status. Do not edit any notebook.
 ```
 
-The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check
-then expects the changed state, and each processor's rerun must still be a
-no-op.
+The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check now
+expects the changed state. Each baseline cell finds a layer that has not seen
+the change batch yet, so each check ends with
+`PASS: bootcamp <stage> was built or brought to contract by this run`. If
+time remains afterwards, **Run all** one notebook again: its check must print
+`PASS: bootcamp <stage> was already current and the rerun changed nothing`.
 
 **Timing:** allow about 10-13 minutes on F2 for four serial notebook jobs;
 do not assume session reuse. Start it as soon as the MLV check passes.
@@ -92,8 +98,7 @@ an output-retrieval failure must not trigger another pipeline run.
   sales lines, 16 units and 516.73 net sales.
 - The change file is uploaded and verified; one `pl_bootcamp_build` run
   succeeds and every stage reports
-  `PASS: bootcamp <stage> contract, after the customer change batch (fixed read-only checks)`;
-  the Bronze, Silver and Gold reruns are still no-ops.
+  `PASS: bootcamp <stage> contract, after the customer change batch (fixed read-only checks)`.
 - C003 has an expired and a current version (Amsterdam, Gold), C007 one
   current version and C002 no current version but retained history, in both
   `silver.customer_history` and `gold.dim_customer`; `gold.customer_current`

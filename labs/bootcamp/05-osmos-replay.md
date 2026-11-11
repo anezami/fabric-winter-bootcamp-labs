@@ -40,10 +40,10 @@ Use durable per-pair watermarks, target writes before watermark advancement,
 and replay-safe processing. Stop on missing history or unsupported features.
 Then land data/bootcamp/changes/customer_changes.csv and run the pipeline once.
 Use the four separate Bronze, Silver, Gold and MLV notebooks, each writing
-only its own layer, and the existing serial pipeline, with local
-imports/helpers, comments and unchanged validation in every context. Use no
-shared Python globals. Include only that stage's fixed checks, even among
-unused definitions. Keep every fixed final check.
+only its own layer, and the existing serial pipeline. Write each as native
+Spark SQL (%%sql cells with a -- Stage: comment header; PySpark only where
+SQL cannot) and keep the fixed validator, baseline and check cells unchanged.
+Do not rely on shared session state: every notebook runs in its own context.
 Write only the specified objects in lh_bootcamp schemas bronze, silver,
 gold and lab_ops. Do not change workspaces, capacities or permissions.
 Show the plan and exact write set for my approval before execution.
@@ -54,11 +54,13 @@ task ID for follow-up; inspect its status rather than submitting duplicates.
 
 ## 3. Check the result
 
-Use the unchanged fixed check in each stage notebook, as in Labs 1-4. Before
-the change file lands each stage prints its initial-load PASS; after the
-pipeline run it prints
+Use the unchanged fixed check cell in each stage notebook, as in Labs 1-4.
+Before the change file lands each stage prints its initial-load PASS; after
+the pipeline run it prints
 `PASS: bootcamp <stage> contract, after the customer change batch (fixed read-only checks)`.
-The Bronze, Silver and Gold checks also print `PASS: <stage> rerun is a no-op`.
+Each check also reports either
+`PASS: bootcamp <stage> was built or brought to contract by this run` or
+`PASS: bootcamp <stage> was already current and the rerun changed nothing`.
 
 Inspect real bounded reads, version ranges, watermark ordering, MLV DDL and
 Fabric lineage. Do not infer the method from matching counts, or incremental

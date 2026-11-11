@@ -1,8 +1,11 @@
 """Build local empty notebook and pipeline definitions; never deploy or run jobs.
 
-Each stage notebook shell has four cells: a markdown description, the fixed
-read-only validator, one implementation cell for the generated layer code and
-a fixed check that validates the layer and proves a rerun changes nothing.
+Each stage notebook shell has five cells: a markdown description, the fixed
+read-only validator, a fixed baseline cell, one Spark SQL placeholder cell for
+the generated layer code and a fixed check that validates the layer and proves
+a rerun changes nothing. The materialized-lake-view notebook has no baseline
+cell because its views are rebuilt declaratively. Generated cells are native
+Spark SQL (%%sql); only the fixed validator, baseline and check cells are PySpark.
 """
 
 import argparse
@@ -15,11 +18,6 @@ from uuid import UUID, uuid4
 HERE = Path(__file__).resolve().parent
 STAGES = ("bronze", "silver", "gold", "mlv")
 NAMES = {stage: f"nb_bootcamp_{stage}" for stage in STAGES}
-PROCESSORS = {
-    "bronze": "load_bronze",
-    "silver": "process_bronze_to_silver",
-    "gold": "process_silver_to_gold",
-}
 DESCRIPTIONS = {
     "bronze": ("Bronze layer",
                "Loads the CSV files landed in `Files/bootcamp/` into `bronze.*` Delta tables "
@@ -52,11 +50,15 @@ def lines(source):
     return [line + "\n" for line in source.rstrip().splitlines()]
 
 
-def code_cell(source, tags=()):
-    """Return one Fabric-compatible code cell with empty outputs and tags."""
+def code_cell(source, tags=(), sql=False):
+    """Return one Fabric-compatible code cell; SQL cells start with %%sql and carry sparksql metadata."""
+    metadata = {"tags": list(tags)}
+    if sql:
+        metadata["microsoft"] = {"language": "sparksql", "language_group": "synapse_pyspark"}
+        source = "%%sql\n" + source
     return {
         "id": uuid4().hex, "cell_type": "code", "execution_count": None,
-        "metadata": {"tags": list(tags)}, "outputs": [], "source": lines(source),
+        "metadata": metadata, "outputs": [], "source": lines(source),
     }
 
 
@@ -79,32 +81,38 @@ def envelope(content, path, format=None):
 def description(stage):
     """Return the markdown description that opens a stage notebook."""
     title, text = DESCRIPTIONS[stage]
+    cells = ["this description", "this layer's fixed read-only validator"]
+    if stage != "mlv":
+        cells.append("the fixed baseline, which records whether the layer is already current")
+    cells += ["the generated Spark SQL implementation, reviewed before running",
+              "the fixed stage check"]
+    listed = "; ".join(f"({number}) {item}" for number, item in enumerate(cells, 1))
     return (f"# {NAMES[stage]}: {title}\n{text}\n\n"
-            "Cells: (1) this description; (2) this layer's fixed read-only validator; "
-            "(3) the generated implementation, reviewed before running; "
-            "(4) the fixed stage check. Do not edit the fixed cells.")
+            f"Cells: {listed}. Do not edit the fixed cells.")
 
 
 def placeholder(stage):
-    """Return the implementation cell that must be replaced by generated code."""
-    return (f"# Generated {stage} implementation: replace this cell with the reviewed code "
+    """Return the Spark SQL cell that fails fast until it is replaced by generated code."""
+    return (f"-- Generated {stage} implementation: replace this cell with the reviewed Spark SQL "
             "generated from the spec.\n"
-            f'raise NotImplementedError("Generate and approve {stage} code live before '
-            'running this shell")')
+            f"SELECT raise_error('Generate and approve {stage} code live before running this shell')")
+
+
+def baseline(stage):
+    """Return the fixed baseline cell that runs before the generated implementation."""
+    return (f"# Fixed baseline cell: record whether the {stage} layer is already current, so that "
+            "rerunning the generated cell below must change nothing.\n"
+            f'bootcamp_begin(spark, "{stage}")')
 
 
 def check(stage):
-    """Return the fixed stage check: validate, then prove that a rerun changes nothing."""
+    """Return the fixed stage check: validate the layer and, when it was current, the no-op rerun."""
     if stage == "mlv":
         return ("# Fixed stage check: validate both materialized lake views against Silver.\n"
                 'validate_bootcamp(spark, "mlv")')
-    function = PROCESSORS[stage]
-    return f'''# Fixed stage check: validate the {stage} contract, then prove a rerun changes nothing.
-validate_bootcamp(spark, "{stage}")
-before = bootcamp_snapshot(spark, "{stage}")
-{function}()
-assert bootcamp_snapshot(spark, "{stage}") == before, "Rerunning {function}() changed {stage}"
-print("PASS: {stage} rerun is a no-op")'''
+    return (f"# Fixed stage check: validate the {stage} contract and, when the baseline found the "
+            "layer already current, prove that the rerun changed nothing.\n"
+            f'validate_bootcamp(spark, "{stage}")')
 
 
 def validator_source(stage):
@@ -127,12 +135,12 @@ def validator_source(stage):
 
 def notebook(stage, workspace_id, lakehouse_id):
     """Build one empty stage notebook shell bound to lh_bootcamp."""
-    cells = [
-        markdown_cell(description(stage)),
-        code_cell(validator_source(stage), ["fixed-validator"]),
-        code_cell(placeholder(stage), ["implementation"]),
-        code_cell(check(stage), ["fixed-stage-check"]),
-    ]
+    cells = [markdown_cell(description(stage)),
+             code_cell(validator_source(stage), ["fixed-validator"])]
+    if stage != "mlv":
+        cells.append(code_cell(baseline(stage), ["fixed-baseline"]))
+    cells.append(code_cell(placeholder(stage), ["implementation"], sql=True))
+    cells.append(code_cell(check(stage), ["fixed-stage-check"]))
     return {
         "nbformat": 4, "nbformat_minor": 5, "cells": cells,
         "metadata": {

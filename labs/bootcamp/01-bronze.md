@@ -28,7 +28,8 @@ After setup approval, follow setup.md in order using Fabric skills/CLI:
 1. Create lh_bootcamp with creationPayload.enableSchemas=true. Wait for
    completion, capture its actual ID and verify schema support.
 2. Upload the five initial CSVs to Files/bootcamp/initial/; verify their
-   bytes and keep them immutable. The change file waits for Lab 4.
+   bytes and keep them immutable. Create the empty Files/bootcamp/changes/
+   folder; the change file waits for Lab 4.
 3. Run prepare-artifacts.py shells with discovered workspace/lakehouse IDs;
    deploy the four bound empty notebooks with unchanged validator/checks.
 4. Run prepare-artifacts.py pipeline with the actual notebook IDs; deploy
@@ -37,32 +38,39 @@ Capture setup evidence. Reconcile this setup's items on retry, skipping
 identical files; stop on conflicts. Poll accepted operations, never duplicate
 submissions. Do not run placeholders, pre-warm Spark or start the pipeline.
 
-Then generate NEW PySpark code for spec sections 3 and 4 in
-nb_bootcamp_bronze that writes only the bronze schema. Define load_bronze()
-and call it once at the end:
+Then generate NEW Spark SQL for spec sections 3 and 4 as %%sql cells for
+nb_bootcamp_bronze that write only the bronze schema. Follow the Native
+Spark SQL rules in section 3:
 - Create the five raw string tables once, with CDF enabled at creation, the
-  minimal cleansing of section 3 and the audit columns, taking _source_file
-  from _metadata.file_path. Never rewrite an existing raw table.
-- Create customers_current once from customers_source, with CDF enabled.
-- If Files/bootcamp/changes/customer_changes.csv exists, create
-  customer_changes_source once and apply its U/I/D events to
-  customers_current with keyed MERGE; skip the MERGE when nothing differs.
-- A second call must commit nothing.
-Start the cell with a # comment header and give every function a docstring.
-Replace only the placeholder cell; keep the description, validator and final
-fixed-check cells. Do not alter the spec, CSVs or validator or copy supplied
-transformations. Show the code and exact write set and explain replay safety.
+  minimal cleansing of section 3 and the audit columns, reading each CSV
+  through a temporary view USING csv and taking _source_file from
+  input_file_name(). Never rewrite an existing raw table.
+- Create customer_changes_source empty with CDF enabled, and load it once
+  from Files/bootcamp/changes/ after customer_changes.csv has landed.
+- Create customers_current once from customers_source, with CDF enabled, and
+  apply the U/I/D events to it with keyed MERGE; clauses match only rows
+  that differ.
+- A rerun without new input must commit nothing.
+Every cell starts with %%sql, then the header comment -- Stage: bronze -
+<what the cell does>, then at least one statement; a comment-only cell fails
+the job. Use PySpark only if SQL cannot do a step and say why in the header.
+Replace only the placeholder cell; keep the description, validator, baseline
+and final fixed-check cells. Do not alter the spec, CSVs or validator or copy
+supplied transformations. Show the code and exact write set and explain
+replay safety.
 Stop for my code approval; setup approval does not authorize running transformations.
 ```
 
-Approve the setup write set first: one lakehouse, five uploads, four empty
-notebooks and their pipeline in your assigned workspace only. After setup,
-open `nb_bootcamp_bronze` and review the newly generated code.
-Approve only if it writes only `bronze`, source Files remain immutable, raw
-values remain strings, no DQ-repair rules are invented and every cell and
-function is documented.
-Inspect every code cell, including the fixed checks: there must be no Silver,
-Gold or MLV functions or table references.
+Approve the setup write set first: one lakehouse, five uploads, an empty
+`changes/` folder, four empty notebooks and their pipeline in your assigned
+workspace only. After setup, open `nb_bootcamp_bronze` and review the newly
+generated code.
+Approve only if it is native Spark SQL (each cell starts with `%%sql` and a
+`-- Stage: bronze - …` header, and any PySpark is justified in that header),
+writes only `bronze`, source Files remain immutable, raw values remain
+strings, no DQ-repair rules are invented and every cell is documented.
+Inspect every code cell, including the fixed baseline and check cells: there
+must be no Silver, Gold or MLV code or table references.
 
 ## 2. Execute approved code
 
@@ -70,10 +78,12 @@ Use this execution prompt after **each** lab's approval:
 
 ```text
 I approve only the code and write set just shown. Use the Fabric skill to
-save these cells in the confirmed stage notebook, preserving the description,
-validator and final fixed check, then trigger that notebook only.
+save these NEW %%sql cells in the confirmed stage notebook, between the
+unchanged fixed baseline cell and the final fixed check cell, preserving the
+description and validator, then trigger that notebook only.
 Check for an existing job first; capture its ID and monitor it to completion
-with actual validation output. Do not trigger the full pipeline while later
+with actual validation output. Then run the same notebook once more and
+require the rerun proof. Do not trigger the full pipeline while later
 shells are unimplemented. Never overlap notebook/pipeline jobs or an
 interactive writer. If notebook submission is unavailable, give me the cells
 to run manually in that notebook instead; do not execute both paths.
@@ -81,33 +91,38 @@ Do not claim PASS without actual execution output.
 ```
 
 For manual execution, paste the approved cells in place of the placeholder,
-between the validator and the final check, and run all cells in order. Keep
-code and output.
+between the fixed baseline cell and the final check, and run all cells in
+order, then **Run all** a second time in the warm session. Keep code and
+output.
 
 ## 3. Verify
 
-The shell's unchanged final check validates Bronze, calls `load_bronze()`
-again and requires identical rows and Delta versions:
+The shell's fixed validator, baseline and check cells are Python because they
+read Delta history and assert exact values; they never change. The baseline
+cell records whether
+Bronze is already current, and the final check validates Bronze and, on a
+rerun, proves the generated cells committed nothing:
 
 ```python
-validate_bootcamp(spark, "bronze")
-before = bootcamp_snapshot(spark, "bronze")
-load_bronze()
-assert bootcamp_snapshot(spark, "bronze") == before, "Rerunning load_bronze() changed bronze"
-print("PASS: bronze rerun is a no-op")
+bootcamp_begin(spark, "bronze")       # fixed baseline cell, before the generated cells
+# ... your NEW %%sql cells run here ...
+validate_bootcamp(spark, "bronze")    # fixed check cell, after the generated cells
 ```
 
 ## Definition of done
 
-- Schema-enabled `lh_bootcamp`, five verified uploads, four correctly bound
-  shells with fixed checks and an unscheduled serial pipeline; setup IDs saved.
+- Schema-enabled `lh_bootcamp`, five verified uploads, the empty `changes/`
+  folder, four correctly bound shells with fixed checks and an unscheduled
+  serial pipeline; setup IDs saved.
 - Actual `PASS: bootcamp bronze contract, initial load (fixed read-only checks)`
-  and `PASS: bronze rerun is a no-op`.
+  and `PASS: bootcamp bronze was built or brought to contract by this run`;
+  the second **Run all** adds
+  `PASS: bootcamp bronze was already current and the rerun changed nothing`.
 - Five raw tables: 6 customers, 4 products, 2 stores, 7 orders and 9 order
   lines as strings; every source value and audit path matches.
 - CDF enabled on every Bronze table; `customers_current` matches the 6 source
   customers.
-- Code is documented. Save code/output and tick your tasks.
+- Code is documented native Spark SQL. Save code/output and tick your tasks.
 
 If setup fails, retain returned IDs, resume/poll the accepted operation and
 reconcile only this approved setup. Do not duplicate creates or overwrite

@@ -4,9 +4,11 @@
 Each stage notebook calls validate_bootcamp(spark, stage) after its generated
 cells. The expected state is derived from the landed CSV files: until
 customer_changes.csv is uploaded every layer must hold the initial load;
-afterwards every layer must hold the changed state. bootcamp_snapshot()
-captures a layer's rows and Delta versions so a rerun can prove that it
-changed nothing. prepare-artifacts.py includes only the labelled sections
+afterwards every layer must hold the changed state. The Bronze, Silver and
+Gold notebooks also run a fixed baseline cell before the generated cells: when
+the layer already meets its contract it records a snapshot of its rows and
+Delta versions, and the final check then proves that rerunning the generated
+code changed nothing. prepare-artifacts.py includes only the labelled sections
 needed by that stage; executing this source locally exposes all stages.
 """
 
@@ -14,10 +16,15 @@ needed by that stage; executing this source locally exposes all stages.
 from collections import Counter as _bootcamp_counter
 
 _BOOTCAMP_CHECKS = {}
+_BOOTCAMP_RERUN_PROOFS = {}
 
 # Validation section: bronze silver gold
+import contextlib as _bootcamp_contextlib
+import io as _bootcamp_io
+
 _BOOTCAMP_LAYER_TABLES = {}
 _BOOTCAMP_OPTIONAL_TABLES = {}
+_BOOTCAMP_BASELINE = {}
 
 # Validation section: silver
 from datetime import datetime as _bootcamp_datetime
@@ -227,6 +234,13 @@ def _bootcamp_check_history(spark, changed):
 
 
 # Validation section: silver gold
+def _bootcamp_latest_change(spark, name):
+    """Return the newest Change Data Feed commit version of a table, or 0 when it has none."""
+    return spark.sql(
+        f"SELECT COALESCE(MAX(_commit_version), 0) AS v FROM table_changes('{name}', 0)"
+    ).first()["v"]
+
+
 def _bootcamp_check_marks(spark, pairs):
     """Assert one current watermark per source/target pair that this layer owns."""
     rows = _bootcamp_table(spark, "lab_ops.cdf_watermarks", {
@@ -243,7 +257,7 @@ def _bootcamp_check_marks(spark, pairs):
     for row in rows:
         if (row["source_table"], row["target_table"]) in pairs:
             _bootcamp_cdf_enabled(spark, row["source_table"])
-            assert row["last_processed_version"] == _bootcamp_version(spark, row["source_table"]), (
+            assert row["last_processed_version"] == _bootcamp_latest_change(spark, row["source_table"]), (
                 f"{row['source_table']} -> {row['target_table']}: watermark is not current"
             )
 
@@ -407,6 +421,36 @@ def bootcamp_snapshot(spark, layer):
             for name in names}
 
 
+def bootcamp_begin(spark, stage):
+    """Record a baseline when the layer already meets its contract, so a rerun must change nothing."""
+    _BOOTCAMP_BASELINE.pop(stage, None)
+    if not all(spark.catalog.tableExists(name) for name in _BOOTCAMP_LAYER_TABLES[stage]):
+        print(f"bootcamp {stage}: layer not built yet; the generated cell builds it")
+        return
+    try:
+        with _bootcamp_contextlib.redirect_stdout(_bootcamp_io.StringIO()):
+            _BOOTCAMP_CHECKS[stage](spark, bootcamp_changes_landed(spark))
+    except Exception:
+        print(f"bootcamp {stage}: layer is not current; the generated cell brings it to contract")
+        return
+    _BOOTCAMP_BASELINE[stage] = bootcamp_snapshot(spark, stage)
+    print(f"bootcamp {stage}: layer is already current; the rerun below must change nothing")
+
+
+def _bootcamp_prove_rerun(spark, stage):
+    """Prove that rerunning the generated cell left an already-current layer untouched."""
+    if stage not in _BOOTCAMP_BASELINE:
+        print(f"PASS: bootcamp {stage} was built or brought to contract by this run")
+        return
+    assert bootcamp_snapshot(spark, stage) == _BOOTCAMP_BASELINE[stage], (
+        f"Rerunning the {stage} generated cell changed an already-current layer"
+    )
+    print(f"PASS: bootcamp {stage} was already current and the rerun changed nothing")
+
+
+_BOOTCAMP_RERUN_PROOFS.update(dict.fromkeys(_BOOTCAMP_LAYER_TABLES, _bootcamp_prove_rerun))
+
+
 # Validation section: common
 def validate_bootcamp(spark, stage):
     """Run only a stage whose fixed checks were included in this notebook."""
@@ -416,3 +460,5 @@ def validate_bootcamp(spark, stage):
     _BOOTCAMP_CHECKS[stage](spark, changed)
     state = "after the customer change batch" if changed else "initial load"
     print(f"PASS: bootcamp {stage} contract, {state} (fixed read-only checks)")
+    if stage in _BOOTCAMP_RERUN_PROOFS:
+        _BOOTCAMP_RERUN_PROOFS[stage](spark, stage)
