@@ -57,8 +57,8 @@ Do not delete, reset or overwrite anything.
 Do not create a lakehouse, upload CSVs, provision notebooks/pipelines, create
 tables or start Spark during pre-work. Do not load prepared transformations.
 The [initial Lab 1 prompt](01-bronze.md) performs [setup](setup.md) after
-approval and loads the unchanged [validator](validate-lakehouse.py) into
-four empty notebook shells.
+approval and selects each shell's unchanged stage sections from the
+[validator](validate-lakehouse.py).
 
 ## Ready check
 

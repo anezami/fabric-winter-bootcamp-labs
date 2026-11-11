@@ -1,6 +1,6 @@
 # Lab 4: Materialized lake views and the change batch
 
-**15 minutes.** Prerequisite: Labs 1-3 pass.
+**17 minutes.** Prerequisite: Labs 1-3 pass.
 
 Open `nb_bootcamp_mlv`. Its description, validator and fixed check are
 already present. The goal is two real Fabric materialized lake views over
@@ -53,7 +53,7 @@ The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check
 then expects the changed state, and each processor's rerun must still be a
 no-op.
 
-**Timing:** reserve about 10-11 minutes on F2 for four serial notebook jobs;
+**Timing:** allow about 10-13 minutes on F2 for four serial notebook jobs;
 do not assume session reuse. Start it as soon as the MLV check passes.
 While it runs, inspect saved definitions, existing output and the pipeline
 dependency graph only. Do not start interactive Spark queries or another job.
@@ -78,6 +78,11 @@ ORDER BY customer_id, valid_from;
 ```
 
 Explain why C003's October sales still use its original version.
+
+For pipeline child output, open the child notebook run in Fabric Monitor.
+Do not assume the manual notebook-job exit-value endpoint exposes pipeline
+children. Report job status separately from any stdout actually retrieved;
+an output-retrieval failure must not trigger another pipeline run.
 
 ## Definition of done
 

@@ -47,6 +47,12 @@ On retry, skip identical uploads; stop on a mismatch. Files are immutable
 after landing. Do not upload `data/bootcamp/changes/customer_changes.csv`
 yet: Lab 4 lands it as new data.
 
+On a connection timeout, retain the lakehouse ID and check reachability using
+the skill's documented regional OneLake endpoint for the verified capacity
+region. Keep the same identity and workspace/lakehouse path; byte-check any
+existing file before resuming. Do not recreate resources or change network or
+access policies. An authorization error is not a reason to try another target.
+
 ## 3. Generate and deploy empty shells
 
 The local [artifact builder](prepare-artifacts.py) uses Python's standard

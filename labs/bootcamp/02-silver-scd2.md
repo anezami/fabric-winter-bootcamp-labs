@@ -1,6 +1,6 @@
 # Lab 2: Silver from the Bronze change feed
 
-**10 minutes.** Prerequisite: Lab 1 passes.
+**9 minutes.** Prerequisite: Lab 1 passes.
 
 Open `nb_bootcamp_silver`. It has its own description, validator and fixed
 final check; no Python state carries over from Bronze, so imports and helpers

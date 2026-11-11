@@ -1,6 +1,6 @@
 # Lab 3: Gold from the Silver change feed
 
-**10 minutes.** Prerequisite: Lab 2 passes.
+**9 minutes.** Prerequisite: Lab 2 passes.
 
 Open `nb_bootcamp_gold`. It reads only Silver; define all imports and
 CDF/watermark helpers here, because no Python state carries over. Keep the

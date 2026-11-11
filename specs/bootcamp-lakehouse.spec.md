@@ -78,7 +78,7 @@ slot. If setup is blocked, ask the instructor; recovery code cannot replace
 missing resources, uploads or bindings. For a blocked implementation, follow
 [repair and recovery](../labs/bootcamp/recovery.md) and identify supplied or
 incomplete stages. Optional Labs 5 and 6 are outside this time box.
-Allocate 10/10/10/15 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
+Allocate 10/9/9/17 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
 after the initial MLV check; inspect only saved definitions and existing output
 while it runs, and query changed data after completion.
 

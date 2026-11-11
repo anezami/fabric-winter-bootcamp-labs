@@ -32,8 +32,8 @@ Use project-osmos. In my confirmed assigned workspace and fresh lh_bootcamp,
 build the Zava sales lakehouse from Files/bootcamp/ using
 specs/bootcamp-lakehouse.spec.md and its fixed validation contract.
 Create raw Bronze tables with CDF, typed Silver tables and SCD2 customer
-history fed only by the Bronze change feed, a documented Gold star fed only
-by the Silver change feed, and gold.sales_daily and gold.customer_current as
+history fed by Bronze CDF, a documented Gold star maintained from Silver CDF
+and current Silver rows, and gold.sales_daily and gold.customer_current as
 Fabric materialized lake views over Silver.
 Keep Files immutable. Preserve expired history and the initial fact snapshot.
 Use durable per-pair watermarks, target writes before watermark advancement,
@@ -42,7 +42,8 @@ Then land data/bootcamp/changes/customer_changes.csv and run the pipeline once.
 Use the four separate Bronze, Silver, Gold and MLV notebooks, each writing
 only its own layer, and the existing serial pipeline, with local
 imports/helpers, comments and unchanged validation in every context. Use no
-shared Python globals. Keep every fixed final check.
+shared Python globals. Include only that stage's fixed checks, even among
+unused definitions. Keep every fixed final check.
 Write only the specified objects in lh_bootcamp schemas bronze, silver,
 gold and lab_ops. Do not change workspaces, capacities or permissions.
 Show the plan and exact write set for my approval before execution.
