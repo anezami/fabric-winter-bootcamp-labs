@@ -8,6 +8,7 @@ a fixed check that validates the layer and proves a rerun changes nothing.
 import argparse
 import base64
 import json
+import re
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -79,7 +80,7 @@ def description(stage):
     """Return the markdown description that opens a stage notebook."""
     title, text = DESCRIPTIONS[stage]
     return (f"# {NAMES[stage]}: {title}\n{text}\n\n"
-            "Cells: (1) this description; (2) the fixed read-only validator; "
+            "Cells: (1) this description; (2) this layer's fixed read-only validator; "
             "(3) the generated implementation, reviewed before running; "
             "(4) the fixed stage check. Do not edit the fixed cells.")
 
@@ -106,12 +107,29 @@ assert bootcamp_snapshot(spark, "{stage}") == before, "Rerunning {function}() ch
 print("PASS: {stage} rerun is a no-op")'''
 
 
+def validator_source(stage):
+    """Select unchanged common and stage-labelled checks, excluding other layers' code."""
+    if stage not in STAGES:
+        raise ValueError(f"Unknown bootcamp stage: {stage}")
+    source = (HERE / "validate-lakehouse.py").read_text(encoding="utf-8")
+    sections = re.split(r"^# Validation section: ([a-z ]+)\n", source, flags=re.MULTILINE)
+    if len(sections) == 1:
+        raise ValueError("The fixed validator has no labelled sections")
+    selected = [sections[0]]
+    for labels, content in zip(sections[1::2], sections[2::2]):
+        names = set(labels.split())
+        if not names or not names <= {"common", *STAGES}:
+            raise ValueError(f"Unknown validation section: {labels}")
+        if "common" in names or stage in names:
+            selected.append(content)
+    return "".join(selected)
+
+
 def notebook(stage, workspace_id, lakehouse_id):
     """Build one empty stage notebook shell bound to lh_bootcamp."""
-    validator = (HERE / "validate-lakehouse.py").read_text(encoding="utf-8")
     cells = [
         markdown_cell(description(stage)),
-        code_cell(validator, ["fixed-validator"]),
+        code_cell(validator_source(stage), ["fixed-validator"]),
         code_cell(placeholder(stage), ["implementation"]),
         code_cell(check(stage), ["fixed-stage-check"]),
     ]

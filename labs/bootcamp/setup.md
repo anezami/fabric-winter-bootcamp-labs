@@ -62,7 +62,7 @@ python labs\bootcamp\prepare-artifacts.py shells --workspace-id $workspaceId --l
 ```
 
 The output folder must be new or empty. Each `.ipynb` contains a markdown
-description, the complete [fixed validator](validate-lakehouse.py), a
+description, only its applicable [fixed validator](validate-lakehouse.py) sections, a
 `NotImplementedError` placeholder and the fixed stage check. No
 transformation code is supplied.
 
@@ -72,8 +72,9 @@ Within the approved setup write set, create exactly `nb_bootcamp_bronze`,
 `definition.format` set to `ipynb`; the request's `definition` object is the
 definition, not the whole request body. Capture actual IDs, wait for completion
 and read back each definition to verify the default lakehouse, description,
-unchanged validator, fail-fast placeholder and final fixed check. Do not run
-the shells.
+unchanged stage-specific validator, fail-fast placeholder and final fixed check.
+Review every code cell: Bronze must contain no Silver/Gold helpers, Silver no
+Gold helpers, and Gold no Bronze reads or Silver validators. Do not run the shells.
 
 Alternatively, import the four `.ipynb` files using Fabric's notebook import
 and inspect their bindings. Do not create a second set of notebooks.

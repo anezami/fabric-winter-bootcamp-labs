@@ -1,6 +1,6 @@
 # Lab 3: Gold from the Silver change feed
 
-**12 minutes.** Prerequisite: Lab 2 passes.
+**10 minutes.** Prerequisite: Lab 2 passes.
 
 Open `nb_bootcamp_gold`. It reads only Silver; define all imports and
 CDF/watermark helpers here, because no Python state carries over. Keep the
@@ -36,7 +36,8 @@ safety, then stop for my approval.
 ```
 
 Before approving, check the CDF reads, update-preimage filter, MERGE keys and
-watermark ordering. Use
+watermark ordering. Review every cell: Gold reconciles against Silver, never
+reads Bronze and contains no Silver-building or MLV code. Use
 [Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
 run this notebook, or run approved cells manually.
 

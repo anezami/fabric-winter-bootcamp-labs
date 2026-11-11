@@ -1,4 +1,4 @@
-# Fixed validator cell: read-only contract checks shared by every bootcamp notebook.
+# Fixed validator cell: read-only contract checks for this notebook's layer.
 """Fixed read-only checks for the tiny bootcamp fixture; not transformation code.
 
 Each stage notebook calls validate_bootcamp(spark, stage) after its generated
@@ -6,14 +6,33 @@ cells. The expected state is derived from the landed CSV files: until
 customer_changes.csv is uploaded every layer must hold the initial load;
 afterwards every layer must hold the changed state. bootcamp_snapshot()
 captures a layer's rows and Delta versions so a rerun can prove that it
-changed nothing.
+changed nothing. prepare-artifacts.py includes only the labelled sections
+needed by that stage; executing this source locally exposes all stages.
 """
 
+# Validation section: common
 from collections import Counter as _bootcamp_counter
-from datetime import datetime as _bootcamp_datetime, timedelta as _bootcamp_timedelta
+
+_BOOTCAMP_CHECKS = {}
+
+# Validation section: bronze silver gold
+_BOOTCAMP_LAYER_TABLES = {}
+_BOOTCAMP_OPTIONAL_TABLES = {}
+
+# Validation section: silver
+from datetime import datetime as _bootcamp_datetime
+_BOOTCAMP_OPEN_END = _bootcamp_datetime(9999, 12, 31)
+
+# Validation section: silver gold mlv
 from decimal import Decimal as _bootcamp_decimal, ROUND_HALF_UP as _bootcamp_round_half_up
 
+# Validation section: gold
+from datetime import timedelta as _bootcamp_timedelta
 
+# Validation section: mlv
+import re as _bootcamp_re
+
+# Validation section: bronze silver
 _BOOTCAMP_SOURCES = {
     "customers_source": ("initial/customers.csv", 6),
     "products": ("initial/products.csv", 4),
@@ -22,14 +41,24 @@ _BOOTCAMP_SOURCES = {
     "order_lines": ("initial/order_lines.csv", 9),
     "customer_changes_source": ("changes/customer_changes.csv", 3),
 }
+
+# Validation section: silver gold mlv
 _BOOTCAMP_ATTRIBUTES = ("customer_id", "full_name", "email", "city", "loyalty_tier")
-_BOOTCAMP_OPEN_END = _bootcamp_datetime(9999, 12, 31)
-_BOOTCAMP_AUDIT_TYPES = {"_ingested_at": "timestamp", "_source_file": "string", "_batch_id": "string"}
 _BOOTCAMP_HISTORY_TYPES = {
     "customer_sk": "bigint", **{key: "string" for key in _BOOTCAMP_ATTRIBUTES},
     "valid_from": "timestamp", "valid_to": "timestamp", "is_current": "boolean",
     "source_commit_version": "bigint",
 }
+
+# Validation section: bronze
+_BOOTCAMP_AUDIT_TYPES = {"_ingested_at": "timestamp", "_source_file": "string", "_batch_id": "string"}
+_BOOTCAMP_LAYER_TABLES["bronze"] = (
+    "bronze.customers_source", "bronze.products", "bronze.stores",
+    "bronze.orders", "bronze.order_lines", "bronze.customers_current",
+)
+_BOOTCAMP_OPTIONAL_TABLES["bronze"] = ("bronze.customer_changes_source",)
+
+# Validation section: silver
 _BOOTCAMP_SILVER_TABLES = {
     "dim_product": ("products", {"list_price": "decimal(18,2)"}),
     "dim_store": ("stores", {}),
@@ -46,6 +75,12 @@ _BOOTCAMP_SILVER_MARKS = {
     ("bronze.order_lines", "silver.order_lines"),
     ("bronze.customers_current", "silver.customer_history"),
 }
+_BOOTCAMP_LAYER_TABLES["silver"] = (
+    "silver.dim_product", "silver.dim_store", "silver.orders",
+    "silver.order_lines", "silver.customer_history", "lab_ops.cdf_watermarks",
+)
+
+# Validation section: gold
 _BOOTCAMP_GOLD_MARKS = {
     ("silver.customer_history", "gold.dim_customer"),
     ("silver.dim_product", "gold.dim_product"),
@@ -53,16 +88,13 @@ _BOOTCAMP_GOLD_MARKS = {
     ("silver.orders", "gold.fact_sales"),
     ("silver.order_lines", "gold.fact_sales"),
 }
-_BOOTCAMP_LAYER_TABLES = {
-    "bronze": ("bronze.customers_source", "bronze.products", "bronze.stores",
-               "bronze.orders", "bronze.order_lines", "bronze.customers_current"),
-    "silver": ("silver.dim_product", "silver.dim_store", "silver.orders",
-               "silver.order_lines", "silver.customer_history", "lab_ops.cdf_watermarks"),
-    "gold": ("gold.dim_customer", "gold.dim_product", "gold.dim_store",
-             "gold.dim_date", "gold.fact_sales", "lab_ops.cdf_watermarks"),
-}
+_BOOTCAMP_LAYER_TABLES["gold"] = (
+    "gold.dim_customer", "gold.dim_product", "gold.dim_store",
+    "gold.dim_date", "gold.fact_sales", "lab_ops.cdf_watermarks",
+)
 
 
+# Validation section: common
 def _bootcamp_rows(frame):
     """Collect a small Spark DataFrame as a list of plain dictionaries."""
     return [row.asDict() for row in frame.collect()]
@@ -87,6 +119,7 @@ def _bootcamp_table(spark, name, types=None):
     return _bootcamp_rows(frame)
 
 
+# Validation section: bronze silver gold
 def _bootcamp_version(spark, name):
     """Return the latest Delta commit version of a table."""
     return spark.sql(f"DESCRIBE HISTORY {name} LIMIT 1").first()["version"]
@@ -101,6 +134,7 @@ def _bootcamp_cdf_enabled(spark, name):
     )
 
 
+# Validation section: bronze silver
 def _bootcamp_source(spark, name):
     """Read a landed CSV as strings with Bronze's minimal cleansing applied."""
     path, count = _BOOTCAMP_SOURCES[name]
@@ -117,17 +151,21 @@ def _bootcamp_source(spark, name):
     return rows
 
 
+# Validation section: common
 def bootcamp_changes_landed(spark):
     """Return True once customer_changes.csv has been uploaded to OneLake Files."""
     try:
-        _bootcamp_source(spark, "customer_changes_source")
+        rows = (spark.read.option("header", True).option("inferSchema", False)
+                .csv("Files/bootcamp/changes/customer_changes.csv").collect())
     except Exception as error:
         if "PATH_NOT_FOUND" in str(error) or "Path does not exist" in str(error):
             return False
         raise
+    assert len(rows) == 3, "customer_changes.csv: expected 3 immutable event rows"
     return True
 
 
+# Validation section: bronze
 def _bootcamp_expected_state(spark, changed):
     """Return the expected keyed customer state before or after the change batch."""
     state = {row["customer_id"]: row for row in _bootcamp_source(spark, "customers_source")}
@@ -141,6 +179,7 @@ def _bootcamp_expected_state(spark, changed):
     return list(state.values())
 
 
+# Validation section: silver
 def _bootcamp_expected_history(spark, changed):
     """Return the expected SCD2 customer versions, without surrogate keys."""
     events = {}
@@ -187,13 +226,17 @@ def _bootcamp_check_history(spark, changed):
     return rows
 
 
+# Validation section: silver gold
 def _bootcamp_check_marks(spark, pairs):
     """Assert one current watermark per source/target pair that this layer owns."""
     rows = _bootcamp_table(spark, "lab_ops.cdf_watermarks", {
         "source_table": "string", "target_table": "string", "last_processed_version": "bigint",
     })
+    owner = next(iter(pairs))[1].split(".")[0]
+    assert all(row["source_table"] and row["target_table"] for row in rows), "Null watermark pair"
+    rows = [row for row in rows if row["target_table"].startswith(f"{owner}.")]
     counts = _bootcamp_counter((row["source_table"], row["target_table"]) for row in rows)
-    assert set(counts) <= _BOOTCAMP_SILVER_MARKS | _BOOTCAMP_GOLD_MARKS, "Unexpected watermark pairs"
+    assert set(counts) <= pairs, "Unexpected watermark pairs for this layer"
     assert all(count == 1 for count in counts.values()), "Duplicate watermark pairs"
     for source, target in sorted(pairs):
         assert counts[(source, target)] == 1, f"Missing watermark {source} -> {target}"
@@ -205,6 +248,7 @@ def _bootcamp_check_marks(spark, pairs):
             )
 
 
+# Validation section: bronze
 def _bootcamp_check_bronze(spark, changed):
     """Check raw string tables, audit lineage, Bronze CDF and the keyed customer state."""
     for name, (path, _) in _BOOTCAMP_SOURCES.items():
@@ -229,6 +273,9 @@ def _bootcamp_check_bronze(spark, changed):
     _bootcamp_cdf_enabled(spark, "bronze.customers_current")
 
 
+_BOOTCAMP_CHECKS["bronze"] = _bootcamp_check_bronze
+
+# Validation section: silver
 def _bootcamp_check_silver(spark, changed):
     """Check typed Silver tables, SCD2 history, Silver CDF and Bronze-to-Silver watermarks."""
     for table, (source, typed) in _BOOTCAMP_SILVER_TABLES.items():
@@ -250,9 +297,12 @@ def _bootcamp_check_silver(spark, changed):
     return history
 
 
+_BOOTCAMP_CHECKS["silver"] = _bootcamp_check_silver
+
+# Validation section: gold
 def _bootcamp_check_gold(spark, changed):
-    """Check the Gold star against Silver and the sources, plus Silver-to-Gold watermarks."""
-    history = _bootcamp_check_silver(spark, changed)
+    """Check the Gold star against its validated Silver inputs and owned watermarks."""
+    history = _bootcamp_table(spark, "silver.customer_history", _BOOTCAMP_HISTORY_TYPES)
     _bootcamp_equal(
         _bootcamp_table(spark, "gold.dim_customer", _BOOTCAMP_HISTORY_TYPES),
         history, "Gold customer history",
@@ -262,11 +312,11 @@ def _bootcamp_check_gold(spark, changed):
         types = {field.name: field.dataType.simpleString() for field in frame.schema.fields}
         _bootcamp_equal(_bootcamp_table(spark, f"gold.{table}", types), _bootcamp_rows(frame), table)
 
-    orders = {row["order_id"]: row for row in _bootcamp_source(spark, "orders")}
+    orders = {row["order_id"]: row for row in _bootcamp_table(spark, "silver.orders")}
     expected = []
-    for line in _bootcamp_source(spark, "order_lines"):
+    for line in _bootcamp_table(spark, "silver.order_lines"):
         order = orders[line["order_id"]]
-        when = _bootcamp_datetime.fromisoformat(order["order_ts"])
+        when = order["order_ts"]
         versions = [row for row in history if row["customer_id"] == order["customer_id"]
                     and row["valid_from"] <= when < row["valid_to"]]
         assert len(versions) == 1, "Order must match exactly one as-of customer version"
@@ -288,7 +338,7 @@ def _bootcamp_check_gold(spark, changed):
         "discount": "decimal(6,4)", "net_amount": "decimal(18,2)",
     }
     _bootcamp_equal(_bootcamp_table(spark, "gold.fact_sales", types), expected, "Sales facts")
-    dates = [_bootcamp_datetime.fromisoformat(row["order_ts"]).date() for row in orders.values()]
+    dates = [row["order_ts"].date() for row in orders.values()]
     day, end = min(dates), max(dates)
     calendar = []
     while day <= end:
@@ -304,7 +354,10 @@ def _bootcamp_check_gold(spark, changed):
     _bootcamp_check_marks(spark, _BOOTCAMP_GOLD_MARKS)
 
 
-def _bootcamp_check_mlv(spark):
+_BOOTCAMP_CHECKS["gold"] = _bootcamp_check_gold
+
+# Validation section: mlv
+def _bootcamp_check_mlv(spark, changed):
     """Check both materialized lake views against Silver and confirm their definitions."""
     orders = {row["order_id"]: row for row in _bootcamp_table(spark, "silver.orders")}
     groups = {}
@@ -332,28 +385,34 @@ def _bootcamp_check_mlv(spark):
     for name in ("gold.sales_daily", "gold.customer_current"):
         statement = spark.sql(f"SHOW CREATE MATERIALIZED LAKE VIEW {name}").first()[0]
         assert "MATERIALIZED LAKE VIEW" in statement.upper(), f"{name}: not a materialized lake view"
+        constraints = _bootcamp_re.findall(
+            r"\bCHECK\s*\(.*?\)\s+ON\s+MISMATCH\s+(\w+)", statement,
+            flags=_bootcamp_re.IGNORECASE | _bootcamp_re.DOTALL,
+        )
+        assert constraints and all(mode.upper() == "FAIL" for mode in constraints), (
+            f"{name}: expected ON MISMATCH FAIL constraints"
+        )
         print(f"{name}: materialized lake view definition confirmed")
 
 
+_BOOTCAMP_CHECKS["mlv"] = _bootcamp_check_mlv
+
+# Validation section: bronze silver gold
 def bootcamp_snapshot(spark, layer):
     """Capture a layer's rows and Delta versions so a rerun can prove it changed nothing."""
     names = list(_BOOTCAMP_LAYER_TABLES[layer])
-    if layer == "bronze" and bootcamp_changes_landed(spark):
-        names.append("bronze.customer_changes_source")
+    if layer in _BOOTCAMP_OPTIONAL_TABLES and bootcamp_changes_landed(spark):
+        names.extend(_BOOTCAMP_OPTIONAL_TABLES[layer])
     return {name: (_bootcamp_version(spark, name), _bootcamp_bag(_bootcamp_table(spark, name)))
             for name in names}
 
 
+# Validation section: common
 def validate_bootcamp(spark, stage):
-    """Run the fixed contract checks for one stage: bronze, silver, gold or mlv."""
-    checks = {"bronze": _bootcamp_check_bronze, "silver": _bootcamp_check_silver,
-              "gold": _bootcamp_check_gold}
-    if stage not in (*checks, "mlv"):
+    """Run only a stage whose fixed checks were included in this notebook."""
+    if stage not in _BOOTCAMP_CHECKS:
         raise ValueError(f"Unknown bootcamp stage: {stage}")
     changed = bootcamp_changes_landed(spark)
-    if stage == "mlv":
-        _bootcamp_check_mlv(spark)
-    else:
-        checks[stage](spark, changed)
+    _BOOTCAMP_CHECKS[stage](spark, changed)
     state = "after the customer change batch" if changed else "initial load"
     print(f"PASS: bootcamp {stage} contract, {state} (fixed read-only checks)")

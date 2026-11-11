@@ -61,6 +61,8 @@ open `nb_bootcamp_bronze` and review the newly generated code.
 Approve only if it writes only `bronze`, source Files remain immutable, raw
 values remain strings, no DQ-repair rules are invented and every cell and
 function is documented.
+Inspect every code cell, including the fixed checks: there must be no Silver,
+Gold or MLV functions or table references.
 
 ## 2. Execute approved code
 

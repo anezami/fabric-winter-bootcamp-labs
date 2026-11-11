@@ -1,6 +1,6 @@
 # Lab 2: Silver from the Bronze change feed
 
-**11 minutes.** Prerequisite: Lab 1 passes.
+**10 minutes.** Prerequisite: Lab 1 passes.
 
 Open `nb_bootcamp_silver`. It has its own description, validator and fixed
 final check; no Python state carries over from Bronze, so imports and helpers
@@ -31,7 +31,8 @@ validator. Explain the grain and SCD2 policy, show the code and write set in
 lh_bootcamp, then stop for my approval.
 ```
 
-Approve the types, SCD2 validity policy, CDF reads and write set. Use
+Approve the types, SCD2 validity policy, CDF reads and write set. Inspect every
+cell, including the fixed checks: no Gold or MLV code belongs here. Use
 [Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
 run this notebook, or run approved cells manually.
 

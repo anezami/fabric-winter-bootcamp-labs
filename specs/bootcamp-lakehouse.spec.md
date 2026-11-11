@@ -27,8 +27,8 @@ setup write set and waits for approval. Use Fabric skills and CLI to create
 and verify schema support. Upload the five initial CSVs to the paths below,
 verifying exact bytes, then use the local builder to deploy
 `nb_bootcamp_bronze`, `nb_bootcamp_silver`, `nb_bootcamp_gold` and
-`nb_bootcamp_mlv`. Each shell holds a markdown description, the complete
-validator, a fail-fast implementation placeholder and an unchanged final
+`nb_bootcamp_mlv`. Each shell holds a markdown description, only its own
+fixed validator sections, a fail-fast implementation placeholder and an unchanged final
 check. Capture actual IDs and create their serial `pl_bootcamp_build`; do not
 schedule it or run placeholders. See [Lab 1 setup](../labs/bootcamp/setup.md).
 
@@ -44,6 +44,14 @@ notebook defines materialized lake views over Silver. Every notebook starts
 with a markdown description, every code cell starts with a `#` comment header
 and every function has a docstring. Every notebook defines its own imports
 and helpers; persistent state lives in Delta tables and watermarks.
+
+Layer isolation includes every cell, helper, constant and fixed check, even
+unused definitions. Bronze contains no Silver/Gold/MLV checks; Silver contains
+no Gold/MLV checks; Gold contains only star-schema logic and checks, with no
+Bronze reads. Gold reconciles against Silver rather than revalidating its
+implementation, so a successful Silver run is its prerequisite. MLV checks
+compare only the two views with Silver. Shared read-only helpers are included
+only where needed.
 
 For each lab: propose, generate, approve, save, run and verify. Keep code,
 job status and actual check output. A submission is not completion.
@@ -70,6 +78,9 @@ slot. If setup is blocked, ask the instructor; recovery code cannot replace
 missing resources, uploads or bindings. For a blocked implementation, follow
 [repair and recovery](../labs/bootcamp/recovery.md) and identify supplied or
 incomplete stages. Optional Labs 5 and 6 are outside this time box.
+Allocate 10/10/10/15 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
+after the initial MLV check; inspect only saved definitions and existing output
+while it runs, and query changed data after completion.
 
 ## 2. Inputs
 
@@ -232,8 +243,10 @@ as `quantity * unit_price * (1 - discount)`, rounded HALF_UP to two decimals
 per line. Keep exactly nine facts, totalling 16 units and 516.73 net sales.
 Add table descriptions and column comments to Gold.
 
-Expose `process_silver_to_gold()` with no arguments. Gold reads only Silver
-Change Data Feed. Dimensions apply the latest change per key with a keyed
+Expose `process_silver_to_gold()` with no arguments. Gold uses Silver Change
+Data Feed to identify changed keys and current Silver rows to assemble affected
+facts and the date range. It never reads Bronze or builds Silver.
+Dimensions apply the latest change per key with a keyed
 MERGE; `dim_date` adds missing days; `fact_sales` recomputes only the orders
 touched by the `orders` or `order_lines` change feed and removes lines
 deleted from Silver.
@@ -315,6 +328,7 @@ instead of recreating the views.
 | MLV | Fixed `mlv` PASS; two actual MLV definitions with FAIL constraints; all groups and totals; current customers; inspected lineage |
 | Change batch | Change CSV uploaded in Lab 4; one successful pipeline run; every stage reports the change-batch PASS and reruns stay no-ops |
 | Documentation | Every notebook has a markdown description, every code cell a `#` comment header and every function a docstring |
+| Layer isolation | Every exported cell contains only its stage's logic and applicable fixed checks, including unused definitions |
 
 Run the fixed checks in each notebook context. They detect whether the
 change file has landed and print `PASS: bootcamp <stage> contract, initial

@@ -1,6 +1,6 @@
 # Lab 4: Materialized lake views and the change batch
 
-**12 minutes.** Prerequisite: Labs 1-3 pass.
+**15 minutes.** Prerequisite: Labs 1-3 pass.
 
 Open `nb_bootcamp_mlv`. Its description, validator and fixed check are
 already present. The goal is two real Fabric materialized lake views over
@@ -27,8 +27,6 @@ Approve, save and execute using
 [Lab 1's execution prompt](01-bronze.md#2-execute-approved-code), or run the
 approved cells manually. Do not overlap execution paths.
 
-## 2. Verify the views
-
 The unchanged final check runs:
 
 ```python
@@ -38,16 +36,9 @@ validate_bootcamp(spark, "mlv")
 It reconciles **every group and value** of `gold.sales_daily` and every row
 of `gold.customer_current` to Silver, and confirms both definitions with
 `SHOW CREATE MATERIALIZED LAKE VIEW`. Inspect the `ON MISMATCH FAIL`
-constraints and open **Manage materialized lake views** to show lineage.
-Report refresh strategy only when Fabric exposes it.
+constraints. Once the initial check passes, start the next step immediately.
 
-```sql
-SELECT date_key, store_id, channel, sales_lines, units, net_amount
-FROM gold.sales_daily
-ORDER BY date_key, store_id, channel;
-```
-
-## 3. Land the change batch and run the pipeline
+## 2. Land the change batch and run the pipeline
 
 Ask Copilot:
 
@@ -62,9 +53,22 @@ The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check
 then expects the changed state, and each processor's rerun must still be a
 no-op.
 
-**Timing:** on F2 the pipeline takes about 10 minutes (four serial cold
-Spark starts). Start it as soon as the MLV check passes, and inspect lineage
-and the views while it runs.
+**Timing:** reserve about 10-11 minutes on F2 for four serial notebook jobs;
+do not assume session reuse. Start it as soon as the MLV check passes.
+While it runs, inspect saved definitions, existing output and the pipeline
+dependency graph only. Do not start interactive Spark queries or another job.
+
+## 3. Inspect the completed build
+
+After the pipeline completes, open **Manage materialized lake views** to show
+lineage. Report refresh strategy only when Fabric exposes it. Query the views
+and customer history:
+
+```sql
+SELECT date_key, store_id, channel, sales_lines, units, net_amount
+FROM gold.sales_daily
+ORDER BY date_key, store_id, channel;
+```
 
 ```sql
 SELECT customer_id, city, loyalty_tier, valid_from, valid_to, is_current
