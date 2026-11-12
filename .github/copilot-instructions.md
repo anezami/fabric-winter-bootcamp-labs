@@ -16,6 +16,15 @@ grain, keys, dependencies and the exact write set. Stop for participant
 approval before executing any new code or patch. Do not copy prepared
 transformations. If a business rule or target is unclear, stop and ask.
 
+Each layer has its own short prompt. Stop at every decision moment in
+section 1 of the spec, end with the reply options, and never continue to the
+next step or layer on your own. Setup approval authorizes only the setup
+writes. Code approval authorizes one run: save the approved cells between the
+fixed baseline and check cells, confirm no job is running, trigger only that
+notebook, monitor it and show the actual check output. If submission is
+unsupported, hand over the cells for a manual **Run all**; never both. Land
+the change file and run the pipeline only after Lab 4's `go`.
+
 ## Fabric boundaries
 
 - Start from the participant's assigned empty workspace with its dedicated
@@ -26,7 +35,7 @@ transformations. If a business rule or target is unclear, stop and ask.
   `lh_bootcamp` before the first remote write. Discover IDs; never guess them.
 - Use only that target. Never create/delete workspaces, resize/resume/pause
   capacities, change permissions, or touch another participant's resources.
-- After setup approval, the initial Lab 1 prompt may create schema-enabled
+- After setup approval, the Lab 1 setup prompt may create schema-enabled
   `lh_bootcamp`, upload the five initial CSVs, deploy four bound empty layer
   notebooks and wire the serial pipeline. Lab 4 uploads the customer change
   CSV. Reconcile this setup's items on retry, skip identical uploads and stop

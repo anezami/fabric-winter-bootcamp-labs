@@ -4,44 +4,42 @@
 
 Open `nb_bootcamp_silver`. It has its own description, validator, fixed
 baseline cell and fixed check cell; session variables and temporary views do
-not carry over from Bronze, so declare what you need here.
+not carry over from Bronze, so the generated cells declare what they need.
 
-## 1. Generate and review
+## 1. Choose the key, generate and run
+
+Paste:
 
 ```text
-Use spark-cli and spec sections 3 and 5 of specs/bootcamp-lakehouse.spec.md.
-Save a short Silver plan and numbered tasks under specs/plans/.
-Generate NEW Spark SQL for nb_bootcamp_silver as %%sql cells that read only
-Bronze and write only silver plus its five lab_ops.cdf_watermarks rows.
-Follow the Native Spark SQL rules in section 3:
-- Create the five typed Silver tables once, empty, with CDF enabled, and
-  lab_ops.cdf_watermarks if it does not exist.
-- One cell per Bronze source and Silver target. Declare session variables
-  for the version range (from = watermark + 1, or 0 on the first run; to =
-  the source's latest change version), read table_changes() through to,
-  ignore update_preimage, keep the latest change per key, apply a keyed MERGE
-  (insert, update, delete) whose source query is inline in USING (...) (a
-  MERGE cannot read a temporary view over a Delta table), then advance the
-  watermark with a MERGE that commits nothing when it already matches.
-- customer_history is SCD2 from bronze.customers_current: a MERGE closes the
-  current version of each changed or deleted customer, then an INSERT opens
-  the new versions; valid_from/valid_to come from effective_at; customer_sk
-  is a unique BIGINT; source_commit_version is the Bronze commit version.
-- Stop on unavailable history; a run without new versions commits nothing.
-Every cell starts with %%sql, then -- Stage: silver - <what the cell does>,
-then at least one statement; use PySpark only if SQL cannot do a step and
-say why in the header. Replace only the placeholder; keep the fixed cells.
-Do not copy supplied transformations or edit the spec, CSVs or validator.
-Explain the grain and SCD2 policy, show the code and write set in
-lh_bootcamp, then stop for my approval.
+Use the spark-cli skill. First ask me to choose the customer_sk strategy
+(decision 4). Then generate NEW native Spark SQL as %%sql cells for
+nb_bootcamp_silver from spec sections 3 and 5. Show the cells, the SCD2
+validity rule and the exact write set. Stop for my code approval.
 ```
 
-Approve the types, SCD2 validity policy, CDF reads and write set. Inspect
-every cell: each generated cell is `%%sql` with a `-- Stage: silver - …`
-header, and the fixed baseline and check cells are Silver-specific too, so no
-Gold or MLV code belongs here. Use
-[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
-run this notebook once, or run approved cells manually.
+**Decision 4 · choose the customer key.** Both options satisfy the contract
+(a unique, non-null BIGINT); Gold copies the key unchanged. Reply `A` or `B`:
+
+- **A:** `xxhash64(customer_id, valid_from)`: deterministic, so a rebuild
+  reproduces the same keys.
+- **B:** the current maximum `customer_sk` plus `row_number()`: a compact
+  sequence whose values depend on processing order.
+
+**Decision 5 · approve the Silver code.** Check:
+
+- Each generated cell is `%%sql` with a `-- Stage: silver - …` header.
+- It reads only Bronze through `table_changes()` from each watermark + 1,
+  writes only `silver` and its five `lab_ops.cdf_watermarks` rows, and
+  advances each watermark only after its target write.
+- Every MERGE source is inline in `USING (...)`.
+- SCD2: a MERGE closes the current version, then an INSERT opens the new one;
+  `valid_from`/`valid_to` come from `effective_at`; an open version ends at
+  `9999-12-31`; `customer_sk` follows your decision 4.
+- No Gold or MLV code in any cell, including the fixed baseline and check
+  cells.
+
+Reply `change: <what>` or `approve`: as in Lab 1, approval saves the cells and
+runs this notebook once, or gives you the cells to run manually.
 
 ## 2. Verify and explain
 
@@ -57,7 +55,7 @@ If time remains, an optional second **Run all** in the warm session lets the
 baseline find Silver current, so the check proves that your cells committed
 nothing.
 
-Inspect the outcome, not just the code:
+**Decision 6 · accept the result.** Inspect the outcome, not just the code:
 
 ```sql
 SELECT customer_id, customer_sk, city, loyalty_tier,
@@ -68,6 +66,8 @@ ORDER BY customer_id, valid_from;
 
 Explain why an attribute change closes a version instead of overwriting it,
 and why facts will join on a surrogate key valid at the order timestamp.
+Compare with the definition of done and accept by pasting the
+[Lab 3](03-gold-cdf.md) prompt.
 
 ## Definition of done
 
@@ -76,14 +76,14 @@ and why facts will join on a surrogate key valid at the order timestamp.
   An optional second **Run all** in the warm session prints
   `PASS: bootcamp silver was already current and the rerun changed nothing`.
 - Typed products, stores, orders and order lines match every source value.
-- Six customer versions have unique BIGINT keys, exact validity bounds,
-  current flags and Bronze source commit versions.
+- Six customer versions have unique BIGINT keys from your chosen strategy,
+  exact validity bounds, current flags and Bronze source commit versions.
 - CDF is enabled on all five Silver tables; the five Bronze-to-Silver
   watermarks equal the Bronze versions.
 - Code is documented native Spark SQL. Save output and tick your tasks.
 
-On failure, send Copilot the assertion or error, approve its patch to the
-generated code and rerun the notebook. Never recreate history, reset
-watermarks or change expected results; see [repair and recovery](recovery.md).
+On failure, reply `repair: <actual error>`, approve the patch to the generated
+code and rerun the notebook. Never recreate history, reset watermarks or
+change expected results; see [repair and recovery](recovery.md).
 
 **Next:** [Lab 3 - Gold from the Silver change feed](03-gold-cdf.md).

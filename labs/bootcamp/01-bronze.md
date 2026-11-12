@@ -7,95 +7,68 @@ dedicated active F2 capacity. No lakehouse, uploaded files, notebooks or warm
 Spark session are required yet. This slot includes [setup](setup.md), cold
 startup and the generated Bronze ingestion.
 
-## 1. Setup, generate and review
+Every layer has its own short prompt. At each **decision** Copilot stops and
+waits for you; reply `approve`, `change: <what>` or `stop`. The rules live in
+the [spec](../../specs/bootcamp-lakehouse.spec.md) (section 1 lists all eleven
+decisions) and the [Copilot guardrails](../../.github/copilot-instructions.md),
+so the prompts stay short.
 
-Replace the workspace placeholder and paste this initial prompt:
+## 1. Set up the lakehouse
 
-```text
-Use the spark-cli skill and CLI. Read specs/bootcamp-lakehouse.spec.md,
-labs/bootcamp/setup.md and the five local data/bootcamp/initial CSV headers.
-My assigned workspace is <assigned workspace name>. It starts empty,
-with a dedicated F2 capacity already assigned. Run az account show;
-discover and confirm the exact workspace, capacity Active status and contents.
-Do not create/change workspaces, capacities or permissions. Stop on
-unexpected contents; never reset an existing build or guess IDs.
-
-Propose the architecture, short table-flow plan and numbered tasks from the
-fixed contracts; save the plan/tasks under specs/plans/. Show the setup
-write set below and target identity. Stop for my setup approval.
-
-After setup approval, follow setup.md in order using Fabric skills/CLI:
-1. Create lh_bootcamp with creationPayload.enableSchemas=true. Wait for
-   completion, capture its actual ID and verify schema support.
-2. Upload the five initial CSVs to Files/bootcamp/initial/; verify their
-   bytes and keep them immutable. Create the empty Files/bootcamp/changes/
-   folder; the change file waits for Lab 4.
-3. Run prepare-artifacts.py shells with discovered workspace/lakehouse IDs;
-   deploy the four bound empty notebooks with unchanged validator/checks.
-4. Run prepare-artifacts.py pipeline with the actual notebook IDs; deploy
-   pl_bootcamp_build with serial success-only dependencies, no schedule.
-Capture setup evidence. Reconcile this setup's items on retry, skipping
-identical files; stop on conflicts. Poll accepted operations, never duplicate
-submissions. Do not run placeholders, pre-warm Spark or start the pipeline.
-
-Then generate NEW Spark SQL for spec sections 3 and 4 as %%sql cells for
-nb_bootcamp_bronze that write only the bronze schema. Follow the Native
-Spark SQL rules in section 3:
-- Create the five raw string tables once, with CDF enabled at creation, the
-  minimal cleansing of section 3 and the audit columns, reading each CSV
-  through a temporary view USING csv and taking _source_file from
-  input_file_name(). Never rewrite an existing raw table.
-- Create customer_changes_source empty with CDF enabled, and load it once
-  from Files/bootcamp/changes/ after customer_changes.csv has landed.
-- Create customers_current once from customers_source, with CDF enabled, and
-  apply the U/I/D events to it with keyed MERGE; clauses match only rows
-  that differ. Write each MERGE source inline in USING (...), as a subquery
-  or a WITH inside it: a MERGE cannot read a temporary view over a Delta
-  table (it fails with "Failed to decode multipart name").
-- A rerun without new input must commit nothing.
-Every cell starts with %%sql, then the header comment -- Stage: bronze -
-<what the cell does>, then at least one statement; a comment-only cell fails
-the job. Use PySpark only if SQL cannot do a step and say why in the header.
-Replace only the placeholder cell; keep the description, validator, baseline
-and final fixed-check cells. Do not alter the spec, CSVs or validator or copy
-supplied transformations. Show the code and exact write set and explain
-replay safety.
-Stop for my code approval; setup approval does not authorize running transformations.
-```
-
-Approve the setup write set first: one lakehouse, five uploads, an empty
-`changes/` folder, four empty notebooks and their pipeline in your assigned
-workspace only. After setup, open `nb_bootcamp_bronze` and review the newly
-generated code.
-Approve only if it is native Spark SQL (each cell starts with `%%sql` and a
-`-- Stage: bronze - …` header, and any PySpark is justified in that header),
-writes only `bronze`, source Files remain immutable, raw values remain
-strings, no DQ-repair rules are invented and every cell is documented.
-Inspect every code cell, including the fixed baseline and check cells: there
-must be no Silver, Gold or MLV code or table references.
-
-## 2. Execute approved code
-
-Use this execution prompt after **each** lab's approval:
+Replace the workspace placeholder and paste:
 
 ```text
-I approve only the code and write set just shown. Use the Fabric skill to
-save these NEW %%sql cells in the confirmed stage notebook, between the
-unchanged fixed baseline cell and the final fixed check cell, preserving the
-description and validator, then trigger that notebook only.
-Check for an existing job first; capture its ID and monitor it to completion
-with actual validation output. Run it once; rerun it only if I ask for the
-optional rerun proof. Do not trigger the full pipeline while later
-shells are unimplemented. Never overlap notebook/pipeline jobs or an
-interactive writer. If notebook submission is unavailable, give me the cells
-to run manually in that notebook instead; do not execute both paths.
-Do not claim PASS without actual execution output.
+Use the spark-cli skill. My assigned workspace <assigned workspace name>
+starts empty, with a dedicated F2 capacity already assigned. Run az account
+show; confirm workspace, capacity and contents. Propose the plan and tasks
+from specs/bootcamp-lakehouse.spec.md, save them under specs/plans/ and show
+the setup write set from labs/bootcamp/setup.md. Stop for my setup approval.
+Then run setup.md steps 2-4, report the setup checkpoint and stop. Do not
+generate Bronze code yet.
 ```
 
-For manual execution, paste the approved cells in place of the placeholder,
-between the fixed baseline cell and the final check, and run all cells in
-order. Keep code and output. If time remains, an optional second **Run all**
-in the warm session shows the rerun proof below.
+**Decision 1 · setup go/no-go.** Check that the identity, workspace and
+capacity are yours, the workspace is empty, and the write set is exactly one
+schema-enabled `lh_bootcamp`, five uploads, an empty `changes/` folder, four
+empty notebooks and their pipeline, in your assigned workspace only. Then
+reply `approve`. Setup approval does not authorize running transformations.
+
+Copilot creates the lakehouse with `creationPayload.enableSchemas=true`,
+uploads the five initial CSVs, deploys the bound shells with
+`prepare-artifacts.py shells`, wires the pipeline with
+`prepare-artifacts.py pipeline` and stops at the setup checkpoint.
+
+## 2. Generate and run Bronze
+
+```text
+Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
+nb_bootcamp_bronze from spec sections 3 and 4. Show the plan, the cells and
+the exact write set. Stop for my code approval.
+```
+
+**Decision 2 · approve the Bronze code.** Open `nb_bootcamp_bronze` and
+review the newly generated code against this checklist:
+
+- Native Spark SQL: each cell starts with `%%sql` and a
+  `-- Stage: bronze - …` header; any PySpark is justified in that header.
+- Writes only `bronze`, keeps source Files immutable, preserves raw values as
+  strings with the audit columns and invents no DQ-repair rules; CDF is
+  enabled when each table is created.
+- `customers_current` is applied with a keyed MERGE whose source is written
+  inline in `USING (...)`, never a temporary view.
+- No Silver, Gold or MLV code or table references in any cell, including the
+  fixed baseline and check cells.
+
+Reply `change: <what>` to regenerate, or `approve`. Approval authorizes one
+run: Copilot saves the cells between the fixed baseline cell and the final
+fixed check cell, confirms no job is running, triggers only
+`nb_bootcamp_bronze`, monitors it and shows the actual check output. The same
+applies to every lab.
+
+If notebook submission is unavailable, Copilot gives you the cells instead:
+paste them in place of the placeholder, between the fixed baseline cell and
+the final check, and run all cells in order. Do not execute both paths. Keep
+code and output.
 
 ## 3. Verify
 
@@ -110,6 +83,11 @@ bootcamp_begin(spark, "bronze")       # fixed baseline cell, before the generate
 # ... your NEW %%sql cells run here ...
 validate_bootcamp(spark, "bronze")    # fixed check cell, after the generated cells
 ```
+
+**Decision 3 · accept the result.** Compare the output with the definition of
+done below. Accept by pasting the [Lab 2](02-silver-scd2.md) prompt; otherwise
+follow the failure notes. If time remains, an optional second **Run all** in
+the warm session shows the rerun proof.
 
 ## Definition of done
 
@@ -130,10 +108,13 @@ If setup fails, retain returned IDs, resume/poll the accepted operation and
 reconcile only this approved setup. Do not duplicate creates or overwrite
 conflicting items/files. Ask the instructor about access/capacity blocks.
 
-If a job fails, get its actual notebook exception from the run snapshot in
-Fabric Monitor. A generic job failure is not enough to diagnose it.
-`Failed to decode multipart name` means a MERGE reads a temporary view over a
-Delta table; the fix is to write that source inline in `USING (...)`.
+If a job fails, reply `repair: <actual error>`. Copilot fixes only the
+generated code to satisfy the unchanged spec and validator, shows the patch
+and write set, and stops at the code decision again; approve to rerun. The
+same reply works in every lab. Get the actual notebook exception from the run
+snapshot in Fabric Monitor; a generic job failure is not enough to diagnose
+it. `Failed to decode multipart name` means a MERGE reads a temporary view
+over a Delta table; the fix is to write that source inline in `USING (...)`.
 Follow [repair and recovery](recovery.md), without weakening the checks.
 
 **Next:** [Lab 2 - Silver and SCD2](02-silver-scd2.md).

@@ -1,7 +1,7 @@
 # Lab 1 setup: empty workspace to bound shells
 
-The [initial Lab 1 prompt](01-bronze.md) performs this procedure after setup
-approval. Start from the assigned empty workspace; its dedicated F2 capacity
+The [Lab 1 setup prompt](01-bronze.md) performs this procedure after setup
+approval (decision 1). Start from the assigned empty workspace; its dedicated F2 capacity
 is already assigned and Active. Do not perform these writes during pre-work.
 Setup and cold Spark startup count inside Lab 1's 13-minute slot.
 
@@ -126,7 +126,8 @@ locally. No data tables or transformations have run; no warm session is required
 
 ## 5. Generate, approve and execute
 
-Generate and approve one notebook at a time using Labs 1-4. Replace only its
+Generate and approve one notebook at a time using the per-layer prompts in
+Labs 1-4; Copilot stops at each decision moment. Replace only its
 implementation placeholder with the approved `%%sql` cells, between the fixed
 baseline and check cells, preserving the description, validator and fixed
 cells. Save the notebook before submitting that individual notebook, or

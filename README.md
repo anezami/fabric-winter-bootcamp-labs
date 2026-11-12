@@ -4,13 +4,14 @@
 45-minute hands-on lab.**
 
 Start from an **empty workspace with a dedicated capacity already assigned**.
-The initial prompt creates `lh_bootcamp`, lands five initial synthetic CSVs
+The setup prompt creates `lh_bootcamp`, lands five initial synthetic CSVs
 and wires four notebooks and a pipeline. Copilot generates each layer as
 native Spark SQL: Bronze, Silver from the Bronze change feed, Gold from
 the Silver change feed, and materialized lake views (MLVs) over Silver.
 Lab 4 lands a customer change batch and runs the pipeline once. Learn Type 2
 slowly changing dimensions (SCD2), Delta Change Data Feed (CDF) and durable
-watermarks. You approve each implementation; fixed checks verify results.
+watermarks. Each layer has its own prompt and decision moments; fixed checks
+verify results.
 
 ## Get started
 
@@ -34,9 +35,9 @@ In Copilot, install the public Fabric skills if missing:
 
 Restart Copilot after installation. Complete the [pre-work](labs/bootcamp/pre-work.md)
 **before the session**: tools, sign-in, access and local [starter CSVs](data/bootcamp/).
-Create nothing in Fabric yet. [Lab 1's initial prompt](labs/bootcamp/01-bronze.md)
-performs [setup](labs/bootcamp/setup.md) after approval, then generates
-Bronze code for separate approval. Setup and cold Spark startup count in the
+Create nothing in Fabric yet. [Lab 1's setup prompt](labs/bootcamp/01-bronze.md)
+performs [setup](labs/bootcamp/setup.md) after approval; the Bronze prompt
+follows. Setup and cold Spark startup count in the
 time box.
 
 Read the [specification](specs/bootcamp-lakehouse.spec.md) and
@@ -44,7 +45,8 @@ Read the [specification](specs/bootcamp-lakehouse.spec.md) and
 
 ## Follow the labs in order
 
-For each lab: **plan -> generate -> review and approve -> run -> check**.
+For each layer: **prompt -> generate -> decide -> run -> check**. Copilot
+stops at every decision; reply `approve`, `change: <what>` or `stop`.
 Each notebook, including its fixed checks, contains only its own layer's
 code. Every notebook and cell starts with a comment. Replace only the
 placeholder cell; keep the fixed validator, baseline and check cells.

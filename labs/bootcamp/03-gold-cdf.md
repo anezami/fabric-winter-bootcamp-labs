@@ -3,49 +3,36 @@
 **8 minutes.** Prerequisite: Lab 2 passes.
 
 Open `nb_bootcamp_gold`. It reads only Silver; session variables and
-temporary views do not carry over from other notebooks, so declare what you
-need here. Keep the fixed cells unchanged.
+temporary views do not carry over from other notebooks, so the generated
+cells declare what they need. Keep the fixed cells unchanged.
 
-## 1. Generate and review
+## 1. Generate and run
+
+Paste:
 
 ```text
-Use spark-cli and spec sections 3, 6 and 8 of
-specs/bootcamp-lakehouse.spec.md. Save a short Gold plan and numbered tasks
-under specs/plans/. Generate NEW Spark SQL for nb_bootcamp_gold as %%sql
-cells that read only silver and write only gold plus its five
-lab_ops.cdf_watermarks rows. Follow the Native Spark SQL rules in section 3:
-- Create the five documented Gold tables once, with table and column
-  comments and the exact columns/types.
-- For each Silver source, declare session variables for the version range
-  (from = watermark + 1, or 0 on the first run; to = the source's latest
-  change version), read table_changes() through to, ignore update_preimage
-  and write that subquery inline in every statement that reads it, including
-  each MERGE's USING (...): a MERGE cannot read a temporary view over a Delta
-  table.
-- dim_customer, dim_product and dim_store apply the latest change per key
-  with a keyed MERGE (dim_customer keyed on customer_sk); dim_date adds the
-  missing days between the first and last order date.
-- fact_sales recomputes only the orders touched by the orders/order_lines
-  changes (keep their ids in an ARRAY session variable) at order-line grain,
-  joins the customer version valid at order_ts, rounds net_amount per line,
-  upserts with one MERGE and removes lines deleted from Silver with WHEN NOT
-  MATCHED BY SOURCE ... THEN DELETE.
-- Advance each watermark only after its target write; stop on unavailable
-  history; a run without new versions commits nothing.
-Every cell starts with %%sql, then -- Stage: gold - <what the cell does>,
-then at least one statement; use PySpark only if SQL cannot do a step and
-say why in the header. Replace only the placeholder; do not copy supplied
-transformations or edit the spec, CSVs or validator. Show the code and write
-set, explain replay safety, then stop for my approval.
+Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
+nb_bootcamp_gold from spec sections 3, 6 and 8. Explain replay safety and the
+as-of customer join. Show the cells and the exact write set. Stop for my code
+approval.
 ```
 
-Before approving, check the CDF reads, update-preimage filter, MERGE keys and
-watermark ordering. Review every cell: each generated cell is `%%sql` with a
-`-- Stage: gold - …` header, Gold reconciles against Silver, never reads
-Bronze and contains no Silver-building or MLV code; the fixed baseline and
-check cells are Gold-specific too. Use
-[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code) to save and
-run this notebook once, or run approved cells manually.
+**Decision 7 · approve the Gold code.** Check:
+
+- Each generated cell is `%%sql` with a `-- Stage: gold - …` header.
+- It reads Silver only through `table_changes()` from each watermark + 1,
+  ignores `update_preimage`, never reads Bronze and contains no
+  Silver-building or MLV code; the fixed baseline and check cells are
+  Gold-specific too.
+- Every MERGE source is inline in `USING (...)`; `dim_customer` is keyed on
+  `customer_sk`.
+- `fact_sales` recomputes only the touched orders, joins the customer version
+  valid at `order_ts` and removes deleted lines with
+  `WHEN NOT MATCHED BY SOURCE`.
+- Each watermark advances only after its target write.
+
+Reply `change: <what>` or `approve`: as in Lab 1, approval saves the cells and
+runs this notebook once, or gives you the cells to run manually.
 
 ## 2. Verify
 
@@ -61,7 +48,7 @@ If time remains, an optional second **Run all** in the warm session lets the
 baseline find Gold current, so the check proves that your cells committed
 nothing.
 
-Query the star:
+**Decision 8 · accept the result.** Query the star:
 
 ```sql
 SELECT d.date, f.store_id, f.channel, c.city, SUM(f.net_amount) AS net_amount
@@ -74,7 +61,8 @@ ORDER BY d.date;
 
 Output equality alone cannot prove the method used CDF: keep the generated
 code and the consumed version ranges (the `lab_ops.cdf_watermarks` rows) as
-evidence.
+evidence. Compare with the definition of done and accept by pasting the
+[Lab 4](04-materialized-view.md) prompt.
 
 ## Definition of done
 
@@ -90,7 +78,7 @@ evidence.
 - Gold tables and columns carry comments; code is documented native Spark
   SQL. Save evidence and tick your tasks.
 
-On failure, have Copilot patch only the generated code, approve and rerun.
+On failure, reply `repair: <actual error>`, approve the patch and rerun.
 Never reset watermarks, overwrite history or relax the contract to pass; see
 [repair and recovery](recovery.md). Do not run the full pipeline until Lab 4.
 

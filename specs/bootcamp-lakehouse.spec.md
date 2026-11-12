@@ -21,7 +21,7 @@ Each participant receives an empty workspace with a dedicated capacity already
 assigned and Active. No lakehouse, staged CSVs, notebooks, pipeline or warm
 Spark session are required in advance.
 
-The initial Lab 1 prompt confirms identity, workspace and capacity, shows the
+The Lab 1 setup prompt confirms identity, workspace and capacity, shows the
 setup write set and waits for approval. Use Fabric skills and CLI to create
 `lh_bootcamp` with `creationPayload.enableSchemas=true`, wait for completion
 and verify schema support. Upload the five initial CSVs to the paths below,
@@ -104,6 +104,49 @@ Allocate 13/7/8/17 minutes to Labs 1/2/3/4. Start Lab 4's pipeline immediately
 after the initial MLV check; inspect only saved definitions and existing output
 while it runs, and query changed data after completion.
 
+### Prompts and decision moments
+
+Each layer has its own short prompt: setup and Bronze in Lab 1, Silver in
+Lab 2, Gold in Lab 3, and MLV and the change batch in Lab 4. A prompt names
+the target notebook and the spec sections to use; the rules stay in this spec
+and in the Copilot instructions instead of being repeated in the prompt.
+Copilot ends its response at the next decision moment and waits for the
+participant. It never continues on its own to the next step or layer.
+
+| # | Lab | Decision | Copilot shows, then stops | Participant replies |
+|---|---|---|---|---|
+| 1 | 1 | Setup go/no-go | Identity, workspace, capacity, empty contents and the setup write set | `approve`, `change: …` or `stop` |
+| 2 | 1 | Bronze code | Plan, `%%sql` cells and exact write set | `approve`, `change: …` or `stop` |
+| 3 | 1 | Accept Bronze | Actual fixed-check output | The next prompt, or `repair` |
+| 4 | 2 | Customer key | Two `customer_sk` strategies, one trade-off each | `A` or `B` |
+| 5 | 2 | Silver code | Cells, SCD2 validity, watermark order and write set | `approve`, `change: …` or `stop` |
+| 6 | 2 | Accept Silver | Actual check output and `customer_history` | The next prompt, or `repair` |
+| 7 | 3 | Gold code | Cells, replay safety, the as-of customer join and write set | `approve`, `change: …` or `stop` |
+| 8 | 3 | Accept Gold | Actual check output | The next prompt, or `repair` |
+| 9 | 4 | MLV code | Both view definitions and how their refresh differs from explicit CDF | `approve`, `change: …` or `stop` |
+| 10 | 4 | Change-batch go/no-go | No running job, an empty `changes/` folder, the file and the one pipeline run | `go` or `stop` |
+| 11 | 4 | Final acceptance | Every stage's result and C002/C003/C007 history | Accept, or label recovery |
+
+- Setup approval authorizes only the setup write set, never transformations.
+  Code approval authorizes one run of that notebook: save the approved cells
+  between its fixed baseline and check cells, confirm that no job is running,
+  trigger only that notebook, monitor it to completion and show the actual
+  check output. If notebook submission is unsupported, hand over the cells for
+  a manual **Run all** instead; never use both paths.
+- `change: …` regenerates and stops again at the same decision. `stop` ends
+  the step without remote writes. `repair: <actual error>` sends the actual
+  error; Copilot shows the patch and write set and stops again at that
+  layer's code decision.
+- Accepting a result costs no extra round trip: read the PASS lines and paste
+  the next prompt.
+- Decision 4 is a genuine design choice: both options satisfy section 5 (a
+  unique, non-null BIGINT). **A** is `xxhash64(customer_id, valid_from)`:
+  deterministic, so a rebuild reproduces the same keys. **B** is the current
+  maximum key plus `row_number()`: a compact sequence whose values depend on
+  processing order. Gold copies the chosen key unchanged.
+- Decision 10 is a go/no-go because a landed file is immutable and the
+  pipeline carries it through every layer.
+
 ## 2. Inputs
 
 Lab 1 uploads the five initial `data/bootcamp/` CSVs into the newly created
@@ -141,7 +184,7 @@ algorithm for multiple business events between watermarks.
 
 - Use only the confirmed workspace and isolated `lh_bootcamp`. Do not
   create/delete workspaces or change capacities, permissions or other resources.
-- After setup approval, the initial prompt may create `lh_bootcamp`, stage the
+- After setup approval, the setup prompt may create `lh_bootcamp`, stage the
   five initial CSVs, create the empty `Files/bootcamp/changes/` folder and
   provision the four named shells and their serial
   pipeline. Lab 4 may upload the change CSV. The organizer supplies the empty
@@ -285,7 +328,8 @@ Apply inserts, updates and deletes with a keyed MERGE.
 current version of each changed or deleted customer followed by an INSERT of
 the new versions. Use BIGINT for surrogate keys and
 source versions, TIMESTAMP for validity bounds, BOOLEAN for `is_current`, and
-STRING for customer attributes. `customer_sk` is unique and non-null; each
+STRING for customer attributes. `customer_sk` is unique and non-null; you choose how it is
+generated at decision 4 in section 1. Each
 customer has at most one current version. Use `9999-12-31 00:00:00` as the
 open end. The initial load opens six current versions with
 `valid_from = effective_at`.
@@ -412,6 +456,7 @@ instead of recreating the views.
 | Silver | Fixed `silver` initial-load PASS and built-by-this-run PASS; typed values exact; six initial history versions; CDF on every Silver table; five current Bronze-to-Silver watermarks |
 | Gold | Fixed `gold` initial-load PASS and built-by-this-run PASS; exact star, dates, as-of keys and facts; five current Silver-to-Gold watermarks; consumed version ranges in the generated code and watermark rows |
 | MLV | Fixed `mlv` PASS; two actual MLV definitions with FAIL constraints; all groups and totals; current customers; inspected lineage |
+| Decisions | Each layer ran from its own prompt; Copilot stopped at every decision moment in section 1, and no remote write or job ran without the matching decision |
 | Change batch | Change CSV uploaded in Lab 4; one successful pipeline run; every stage reports the change-batch PASS |
 | Documentation | Every notebook has a markdown description and every generated cell is a `%%sql` cell with a `-- Stage: <stage> - ` header |
 | Layer isolation | Every exported cell contains only its stage's logic and applicable fixed checks, including unused definitions; only the fixed validator, baseline and check cells are Python |

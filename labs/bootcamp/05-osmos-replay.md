@@ -11,8 +11,8 @@ This lab starts from the [Lab 1 setup checkpoint](setup.md#4-wire-the-serial-pip
 staged CSVs and empty notebook implementations, with no built tables.
 Do not overwrite your completed live build. For a separate replay, ask the
 instructor to assign a fresh empty workspace with its dedicated active capacity.
-Confirm the new target, then run only the setup portion of the
-[Lab 1 initial prompt](01-bronze.md); stop before Bronze code generation.
+Confirm the new target, then run only the
+[Lab 1 setup prompt](01-bronze.md); skip the Bronze prompt.
 Do not reset resources, create workspaces or change capacity yourself.
 
 Confirm identity, assigned workspace, isolated schema-enabled `lh_bootcamp`,

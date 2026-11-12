@@ -7,30 +7,25 @@ already present. The goal is two real Fabric materialized lake views over
 Silver, not merely queries returning the same numbers. Then a customer change
 file arrives and one pipeline run carries it through every layer.
 
-## 1. Generate and execute
+## 1. Generate and run the materialized lake views
+
+Paste:
 
 ```text
-Use spark-cli and section 7 of specs/bootcamp-lakehouse.spec.md.
-Save a short MLV plan and numbered tasks under specs/plans/. Generate NEW
-Spark SQL for nb_bootcamp_mlv as %%sql cells that read only silver and
-define gold.sales_daily and gold.customer_current with CREATE OR REPLACE
-MATERIALIZED LAKE VIEW, not tables or ordinary views. Implement the exact
-grouping, columns/types and ON MISMATCH FAIL constraints. Every cell starts
-with %%sql, then -- Stage: mlv - <what the cell does>, then at least one
-statement; comment each view in its header. Replace only the placeholder; do
-not copy supplied transformations or edit the spec, CSVs or validator. Do not
-claim incremental refresh without Fabric run evidence. Show the code and
-write set, explain explicit CDF versus Fabric-managed refresh, then stop for
-my approval.
+Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
+nb_bootcamp_mlv from spec section 7. Explain how materialized lake view
+refresh differs from explicit CDF. Show the cells and the exact write set.
+Stop for my code approval.
 ```
 
-Approve, save and execute using
-[Lab 1's execution prompt](01-bronze.md#2-execute-approved-code), but run
-this notebook only once: the views are replaced on every run, so there is no
-rerun proof. Or run the approved cells manually. Do not overlap execution
-paths.
-
-The shell's fixed check cell runs after your generated cells:
+**Decision 9 · approve the MLV code.** Check that each generated cell is
+`%%sql` with a `-- Stage: mlv - …` header and that it reads only `silver` and
+defines `gold.sales_daily` and `gold.customer_current` with
+`CREATE OR REPLACE MATERIALIZED LAKE VIEW` (not tables or ordinary views),
+with the exact grouping, columns and `ON MISMATCH FAIL` constraints. Reply
+`change: <what>` or `approve` to save and run it once: the views are replaced
+on every run, so there is no rerun proof. The shell's fixed check cell runs
+after your generated cells:
 
 ```python
 validate_bootcamp(spark, "mlv")       # fixed check cell, after the generated cells
@@ -43,14 +38,19 @@ constraints. Once the initial check passes, start the next step immediately.
 
 ## 2. Land the change batch and run the pipeline
 
-Ask Copilot:
+Paste:
 
 ```text
-Upload data/bootcamp/changes/customer_changes.csv to
-Files/bootcamp/changes/ in lh_bootcamp and verify its bytes. Then check that
-no job is running and trigger pl_bootcamp_build once. Monitor it to
-completion and report each notebook's status. Do not edit any notebook.
+Prepare the change batch: confirm that all four notebooks passed, no job is
+running and Files/bootcamp/changes/ in lh_bootcamp is empty. Stop for my
+go/no-go. On go, upload data/bootcamp/changes/customer_changes.csv there,
+verify its bytes, trigger pl_bootcamp_build once and report each notebook's
+status. Do not edit any notebook.
 ```
+
+**Decision 10 · change-batch go/no-go.** A landed file is immutable and the
+pipeline carries it through every layer, so reply `go` only when the preflight
+is clean; otherwise `stop` and fix the failing stage first.
 
 The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check now
 expects the changed state. Each baseline cell finds a layer that has not seen
@@ -90,6 +90,9 @@ Do not assume the manual notebook-job exit-value endpoint exposes pipeline
 children. Report job status separately from any stdout actually retrieved;
 an output-retrieval failure must not trigger another pipeline run.
 
+**Decision 11 · accept the result.** Compare with the definition of done, or
+label any stage that needed recovery.
+
 ## Definition of done
 
 - Actual `PASS: bootcamp mlv contract, initial load (fixed read-only checks)`
@@ -106,7 +109,7 @@ an output-retrieval failure must not trigger another pipeline run.
 - Generated code and check output are saved in your notebooks. Tick the
   completed tasks.
 
-On failure, give Copilot the actual error and repair the generated code in
+On failure, reply `repair: <actual error>` to repair the generated code in
 the failing notebook only, keeping the checks fixed. Rerun the pipeline once;
 Bronze and Silver no-op if already applied. If materialized lake views are
 unavailable, label the stage "query checked; materialized lake view not
