@@ -12,10 +12,16 @@ file arrives and one pipeline run carries it through every layer.
 Paste:
 
 ```text
-Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
-nb_bootcamp_mlv from spec section 7. Explain how materialized lake view
-refresh differs from explicit CDF. Show the cells and the exact write set.
-Stop for my code approval.
+Use the spark-cli skill.
+Goal: build the materialized lake views in lh_bootcamp.
+Read Silver.
+Generate NEW native Spark SQL as %%sql cells in nb_bootcamp_mlv from spec
+section 7.
+Create only gold.sales_daily and gold.customer_current.
+Validate with the fixed check and report its row counts.
+Preserve Bronze, Silver and the other Gold tables.
+Explain how materialized lake view refresh differs from explicit CDF.
+Show the cells and the exact write set. Stop for my code approval.
 ```
 
 **Decision 9 · approve the MLV code.** Check that each generated cell is
@@ -23,8 +29,9 @@ Stop for my code approval.
 defines `gold.sales_daily` and `gold.customer_current` with
 `CREATE OR REPLACE MATERIALIZED LAKE VIEW` (not tables or ordinary views),
 with the exact grouping, columns and `ON MISMATCH FAIL` constraints. Reply
-`change: <what>` or `approve` to save and run it once: the views are replaced
-on every run, so there is no rerun proof. The shell's fixed check cell runs
+`change: <what>` or `approve` to save and run it once. The views are replaced
+as a whole on every run, so no schema carries over and there is no rerun
+proof. The shell's fixed check cell runs
 after your generated cells:
 
 ```python
@@ -41,11 +48,14 @@ constraints. Once the initial check passes, start the next step immediately.
 Paste:
 
 ```text
-Prepare the change batch: confirm that all four notebooks passed, no job is
-running and Files/bootcamp/changes/ in lh_bootcamp is empty. Stop for my
-go/no-go. On go, upload data/bootcamp/changes/customer_changes.csv there,
-verify its bytes, trigger pl_bootcamp_build once and report each notebook's
-status. Do not edit any notebook.
+Goal: land the customer change batch and run the pipeline once.
+Confirm that all four notebooks passed, no job is running and
+Files/bootcamp/changes/ in lh_bootcamp is empty.
+Stop for my go/no-go.
+On go, upload data/bootcamp/changes/customer_changes.csv there, verify its
+bytes and trigger pl_bootcamp_build once.
+Validate by reporting each notebook's status.
+Preserve every notebook: edit none.
 ```
 
 **Decision 10 · change-batch go/no-go.** A landed file is immutable and the
@@ -96,7 +106,8 @@ label any stage that needed recovery.
 ## Definition of done
 
 - Actual `PASS: bootcamp mlv contract, initial load (fixed read-only checks)`
-  with both view definitions confirmed and lineage inspected.
+  with both view definitions confirmed and lineage inspected; the
+  `bootcamp mlv rows validated: ...` line gives the row count of each view.
 - `gold.sales_daily`: seven groups reconcile individually, totalling nine
   sales lines, 16 units and 516.73 net sales.
 - The change file is uploaded and verified; one `pl_bootcamp_build` run

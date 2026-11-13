@@ -45,7 +45,7 @@ Read the [specification](specs/bootcamp-lakehouse.spec.md) and
 
 ## Follow the labs in order
 
-For each layer: **prompt -> generate -> decide -> run -> check**. Copilot
+For each layer: **prompt, generate, decide, run, check**. Copilot
 stops at every decision; reply `approve`, `change: <what>` or `stop`.
 Each notebook, including its fixed checks, contains only its own layer's
 code. Every notebook and cell starts with a comment. Replace only the
@@ -60,8 +60,8 @@ Generated code or an accepted job is not a successful run.
 | 35-43 | [3. Gold from CDF](labs/bootcamp/03-gold-cdf.md) | Documented star schema from the Silver change feed | `gold` PASS: 9 facts, 16 units, 516.73 net sales; keys resolve; five Gold watermarks current. |
 | 43-60 | [4. MLVs + changes](labs/bootcamp/04-materialized-view.md) | `gold.sales_daily` and `gold.customer_current` over Silver; land the change batch; run the pipeline once | `mlv` PASS: views reconcile with FAIL constraints; every stage reports the change-batch PASS. |
 
-Use one Spark workload at a time. Run each notebook as it becomes ready;
-run the pipeline only **after all four notebooks are implemented**.
+Use one Spark workload at a time: run each notebook when ready, and the
+pipeline only **after all four are implemented**.
 
 ## Finish
 
@@ -82,5 +82,6 @@ a pass.
 | [6. Semantic model + Fabric IQ](labs/bootcamp/06-semantic-model-fabric-iq.md) | Approve the AI-proposed model/measures, deploy and refresh it, then execute queries whose totals and daily groups reconcile to Gold. |
 
 Keep source files immutable. Use only your confirmed workspace and lakehouse;
-do not change capacities, permissions or another participant's resources.
-Never commit credentials or environment-specific IDs.
+change no capacity, permission or other participant's resource. Fabric
+permissions are the boundary: never paste credentials into prompts or
+commit credentials or environment-specific IDs.

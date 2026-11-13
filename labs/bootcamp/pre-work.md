@@ -47,7 +47,10 @@ client-specific setup. Do not copy CLI configuration into a different client.
 Ask Copilot to list and confirm the exact assigned workspace, its capacity
 assignment and Active status, your identity and permission to create items.
 Ask the instructor to confirm that the capacity is dedicated to your workspace
-and that the runtime supports MLVs. Do not test access by creating items.
+and that the runtime supports MLVs. Do not test access by creating items. Your
+Fabric permissions are the authorization boundary: never paste credentials or
+tokens into a prompt. Because the F2 is dedicated to your workspace, nobody
+else's jobs compete with yours; run one workload at a time yourself.
 
 Check that the workspace is empty and the local [CSV files](../../data/bootcamp/)
 (five initial files and one change file) are present. If the workspace

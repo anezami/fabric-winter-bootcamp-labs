@@ -27,30 +27,54 @@ prerequisites. Never send credentials in a prompt.
 
 ## 2. Submit a bounded task
 
+Submit one task. It follows the
+[recommended outcome pattern](https://learn.microsoft.com/en-us/fabric/data-engineering/data-engineering-agent-best-practices):
+goal, sources, transformations, outputs, validation and constraints.
+
 ```text
-Use project-osmos. In my confirmed assigned workspace and fresh lh_bootcamp,
-build the Zava sales lakehouse from Files/bootcamp/ using
-specs/bootcamp-lakehouse.spec.md and its fixed validation contract.
-Create raw Bronze tables with CDF, typed Silver tables and SCD2 customer
-history fed by Bronze CDF, a documented Gold star maintained from Silver CDF
-and current Silver rows, and gold.sales_daily and gold.customer_current as
-Fabric materialized lake views over Silver.
-Keep Files immutable. Preserve expired history and the initial fact snapshot.
-Use durable per-pair watermarks, target writes before watermark advancement,
-and replay-safe processing. Stop on missing history or unsupported features.
-Then land data/bootcamp/changes/customer_changes.csv and run the pipeline once.
-Use the four separate Bronze, Silver, Gold and MLV notebooks, each writing
-only its own layer, and the existing serial pipeline. Write each as native
-Spark SQL (%%sql cells with a -- Stage: comment header; PySpark only where
-SQL cannot) and keep the fixed validator, baseline and check cells unchanged.
-Do not rely on shared session state: every notebook runs in its own context.
-Write only the specified objects in lh_bootcamp schemas bronze, silver,
-gold and lab_ops. Do not change workspaces, capacities or permissions.
-Show the plan and exact write set for my approval before execution.
+Use project-osmos.
+Goal: build the isolated Zava sales lakehouse in my confirmed assigned
+workspace and fresh lh_bootcamp, following specs/bootcamp-lakehouse.spec.md.
+Read the CSVs in Files/bootcamp/initial/ and, after the first build, land and
+read data/bootcamp/changes/customer_changes.csv in Files/bootcamp/changes/.
+Apply raw Bronze with CDF; typed Silver with SCD2 customer history fed by
+Bronze CDF; a documented Gold star maintained from Silver CDF and current
+Silver rows.
+Create or update the Bronze, Silver, Gold and lab_ops tables, and
+gold.sales_daily and gold.customer_current as Fabric materialized lake views
+over Silver. Use the four setup notebooks (Bronze, Silver, Gold, MLV), each
+writing only its own layer, as native Spark SQL (%%sql cells with -- Stage:
+comments; PySpark only where SQL cannot), with fixed validation in each.
+Keep the fixed validator, baseline and check cells unchanged.
+Write pattern: create each Bronze table once; merge Silver and Gold on stable
+keys and retain expired customer versions; replace the two views; keep
+schemas locked and stop on a schema mismatch.
+Reruns: with no new input a rerun changes nothing; advance CDF watermarks only
+after target writes; run the pipeline once after landing the change file.
+Validate source counts, SCD2 state, dimension keys, fact grain and revenue,
+watermarks, replay, and MLV totals and lineage, using only each stage's fixed
+checks, even among unused definitions. Report row counts per table and
+inserted, updated, deleted and unchanged counts per MERGE where Spark returns
+them; rejected: none.
+Preserve the OneLake CSVs and the setup pipeline wiring. Write only to
+lh_bootcamp schemas bronze, silver, gold and lab_ops. Touch no other
+workspace, capacity or permission. Add no data-quality quarantine. Do not rely
+on shared session state or promise session reuse.
+Confirm the plan and exact write set before execution; stop on a CDF
+retention gap or unsupported MLV feature.
 ```
 
 Approve the plan and write set, then let the same task execute. Keep the
 task ID for follow-up; inspect its status rather than submitting duplicates.
+
+**Capacity and cost.** Osmos consumes LLM tokens as well as Spark compute, so
+start with this one bounded task in one workspace and run it alone. Measure
+both: the Microsoft Fabric Capacity Metrics app for Spark and the Project
+Osmos consumption page for the agent. A separate workspace on a shared
+capacity gives no compute isolation, while a separately assigned capacity
+does; that is why each participant has a dedicated F2. If a capacity is
+shared, ask your instructor about on-demand (autoscale) billing for Spark. Its
+capacity-unit limit bounds Spark compute, not LLM tokens.
 
 ## 3. Check the result
 
@@ -72,6 +96,8 @@ MLV refresh from a successful create.
   after the change batch.
 - History, facts, keys and all ten watermarks meet the same contract as
   Labs 1-4; reruns without new input preserve them.
+- Osmos' reported row counts match the `rows validated` lines of the fixed
+  checks.
 - Both real MLVs pass: `gold.sales_daily` has seven reconciled groups and six
   FAIL constraints, `gold.customer_current` six current customers, and
   lineage is inspected.

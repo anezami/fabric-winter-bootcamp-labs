@@ -17,6 +17,7 @@ from collections import Counter as _bootcamp_counter
 
 _BOOTCAMP_CHECKS = {}
 _BOOTCAMP_RERUN_PROOFS = {}
+_BOOTCAMP_COUNTS = {}
 
 # Validation section: bronze silver gold
 import contextlib as _bootcamp_contextlib
@@ -118,12 +119,14 @@ def _bootcamp_equal(actual, expected, label):
 
 
 def _bootcamp_table(spark, name, types=None):
-    """Read a table and, when types are given, assert its exact column types."""
+    """Read a table, assert its exact column types when given, and record its row count."""
     frame = spark.table(name)
     if types is not None:
         actual = {field.name: field.dataType.simpleString() for field in frame.schema.fields}
         assert actual == types, f"{name}: expected types {types}, got {actual}"
-    return _bootcamp_rows(frame)
+    rows = _bootcamp_rows(frame)
+    _BOOTCAMP_COUNTS[name] = len(rows)
+    return rows
 
 
 # Validation section: bronze silver gold
@@ -457,8 +460,11 @@ def validate_bootcamp(spark, stage):
     if stage not in _BOOTCAMP_CHECKS:
         raise ValueError(f"Unknown bootcamp stage: {stage}")
     changed = bootcamp_changes_landed(spark)
+    _BOOTCAMP_COUNTS.clear()
     _BOOTCAMP_CHECKS[stage](spark, changed)
     state = "after the customer change batch" if changed else "initial load"
     print(f"PASS: bootcamp {stage} contract, {state} (fixed read-only checks)")
+    counts = ", ".join(f"{name}={rows}" for name, rows in sorted(_BOOTCAMP_COUNTS.items()))
+    print(f"bootcamp {stage} rows validated: {counts}")
     if stage in _BOOTCAMP_RERUN_PROOFS:
         _BOOTCAMP_RERUN_PROOFS[stage](spark, stage)

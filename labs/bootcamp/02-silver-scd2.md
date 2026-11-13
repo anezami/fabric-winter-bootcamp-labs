@@ -11,10 +11,17 @@ not carry over from Bronze, so the generated cells declare what they need.
 Paste:
 
 ```text
-Use the spark-cli skill. First ask me to choose the customer_sk strategy
-(decision 4). Then generate NEW native Spark SQL as %%sql cells for
-nb_bootcamp_silver from spec sections 3 and 5. Show the cells, the SCD2
-validity rule and the exact write set. Stop for my code approval.
+Use the spark-cli skill.
+Goal: build Silver in lh_bootcamp. First ask me to choose the customer_sk
+strategy (decision 4).
+Read Bronze through table_changes().
+Generate NEW native Spark SQL as %%sql cells in nb_bootcamp_silver from spec
+sections 3 and 5.
+Create only silver tables and their lab_ops watermarks.
+Validate with the fixed check and report its row counts.
+Preserve Bronze.
+Show the cells, the SCD2 validity rule and the exact write set. Stop for my
+code approval.
 ```
 
 **Decision 4 · choose the customer key.** Both options satisfy the contract
@@ -32,6 +39,9 @@ validity rule and the exact write set. Stop for my code approval.
   writes only `silver` and its five `lab_ops.cdf_watermarks` rows, and
   advances each watermark only after its target write.
 - Every MERGE source is inline in `USING (...)`.
+- Every MERGE uses the table's stable key from the write-pattern table in
+  spec section 3, so a rerun with no new changes commits nothing, and there is
+  no `mergeSchema` or schema auto-merge.
 - SCD2: a MERGE closes the current version, then an INSERT opens the new one;
   `valid_from`/`valid_to` come from `effective_at`; an open version ends at
   `9999-12-31`; `customer_sk` follows your decision 4.
@@ -80,6 +90,8 @@ Compare with the definition of done and accept by pasting the
   exact validity bounds, current flags and Bronze source commit versions.
 - CDF is enabled on all five Silver tables; the five Bronze-to-Silver
   watermarks equal the Bronze versions.
+- The `bootcamp silver rows validated: ...` line lists the row count of every
+  table the check read.
 - Code is documented native Spark SQL. Save output and tick your tasks.
 
 On failure, reply `repair: <actual error>`, approve the patch to the generated

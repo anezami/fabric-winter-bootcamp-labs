@@ -11,10 +11,16 @@ cells declare what they need. Keep the fixed cells unchanged.
 Paste:
 
 ```text
-Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
-nb_bootcamp_gold from spec sections 3, 6 and 8. Explain replay safety and the
-as-of customer join. Show the cells and the exact write set. Stop for my code
-approval.
+Use the spark-cli skill.
+Goal: build Gold in lh_bootcamp.
+Read Silver through table_changes().
+Generate NEW native Spark SQL as %%sql cells in nb_bootcamp_gold from spec
+sections 3, 6 and 8.
+Create only gold tables and their lab_ops watermarks.
+Validate with the fixed check and report its row counts.
+Preserve Bronze and Silver.
+Explain replay safety and the as-of customer join.
+Show the cells and the exact write set. Stop for my code approval.
 ```
 
 **Decision 7 · approve the Gold code.** Check:
@@ -25,7 +31,9 @@ approval.
   Silver-building or MLV code; the fixed baseline and check cells are
   Gold-specific too.
 - Every MERGE source is inline in `USING (...)`; `dim_customer` is keyed on
-  `customer_sk`.
+  `customer_sk`. Every MERGE uses the stable key from the write-pattern table
+  in spec section 3, so a rerun with no new changes commits nothing, and
+  there is no `mergeSchema` or schema auto-merge.
 - `fact_sales` recomputes only the touched orders, joins the customer version
   valid at `order_ts` and removes deleted lines with
   `WHEN NOT MATCHED BY SOURCE`.
@@ -75,6 +83,8 @@ evidence. Compare with the definition of done and accept by pasting the
   customer keys.
 - The five Silver-to-Gold watermarks equal the Silver versions; the consumed
   version ranges are in the generated code and the watermark rows.
+- The `bootcamp gold rows validated: ...` line lists the row count of every
+  table the check read.
 - Gold tables and columns carry comments; code is documented native Spark
   SQL. Save evidence and tick your tasks.
 

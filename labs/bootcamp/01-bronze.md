@@ -7,7 +7,11 @@ dedicated active F2 capacity. No lakehouse, uploaded files, notebooks or warm
 Spark session are required yet. This slot includes [setup](setup.md), cold
 startup and the generated Bronze ingestion.
 
-Every layer has its own short prompt. At each **decision** Copilot stops and
+Every layer has its own short prompt. Each states its outcome the way Microsoft
+recommends for [data engineering
+agents](https://learn.microsoft.com/en-us/fabric/data-engineering/data-engineering-agent-best-practices):
+goal, what to read, what to generate, what to create, how to validate and what
+to preserve. At each **decision** Copilot stops and
 waits for you; reply `approve`, `change: <what>` or `stop`. The rules live in
 the [spec](../../specs/bootcamp-lakehouse.spec.md) (section 1 lists all eleven
 decisions) and the [Copilot guardrails](../../.github/copilot-instructions.md),
@@ -18,13 +22,16 @@ so the prompts stay short.
 Replace the workspace placeholder and paste:
 
 ```text
-Use the spark-cli skill. My assigned workspace <assigned workspace name>
-starts empty, with a dedicated F2 capacity already assigned. Run az account
-show; confirm workspace, capacity and contents. Propose the plan and tasks
-from specs/bootcamp-lakehouse.spec.md, save them under specs/plans/ and show
-the setup write set from labs/bootcamp/setup.md. Stop for my setup approval.
-Then run setup.md steps 2-4, report the setup checkpoint and stop. Do not
-generate Bronze code yet.
+Use the spark-cli skill.
+Goal: set up lh_bootcamp in my assigned workspace <assigned workspace name>,
+which starts empty with a dedicated F2 capacity already assigned.
+Run az account show; confirm workspace, capacity and contents.
+Propose the plan and tasks from specs/bootcamp-lakehouse.spec.md, save them
+under specs/plans/ and show the setup write set from labs/bootcamp/setup.md.
+Stop for my setup approval.
+Then run setup.md steps 2-4; validate the setup checkpoint.
+Preserve other workspaces, capacities and permissions.
+Do not generate Bronze code yet.
 ```
 
 **Decision 1 · setup go/no-go.** Check that the identity, workspace and
@@ -41,9 +48,15 @@ uploads the five initial CSVs, deploys the bound shells with
 ## 2. Generate and run Bronze
 
 ```text
-Use the spark-cli skill. Generate NEW native Spark SQL as %%sql cells for
-nb_bootcamp_bronze from spec sections 3 and 4. Show the plan, the cells and
-the exact write set. Stop for my code approval.
+Use the spark-cli skill.
+Goal: build Bronze in lh_bootcamp.
+Read the five CSVs in Files/bootcamp/initial/.
+Generate NEW native Spark SQL as %%sql cells in nb_bootcamp_bronze from spec
+sections 3 and 4.
+Create only bronze tables.
+Validate with the fixed check and report its row counts.
+Preserve the CSVs and the other notebooks.
+Show the plan, cells and exact write set. Stop for my code approval.
 ```
 
 **Decision 2 · approve the Bronze code.** Open `nb_bootcamp_bronze` and
@@ -54,6 +67,9 @@ review the newly generated code against this checklist:
 - Writes only `bronze`, keeps source Files immutable, preserves raw values as
   strings with the audit columns and invents no DQ-repair rules; CDF is
   enabled when each table is created.
+- Reruns are safe and schemas stay locked: raw tables are created only if
+  missing, change events are inserted only if new, and there is no
+  `mergeSchema` or schema auto-merge. A header mismatch stops the run.
 - `customers_current` is applied with a keyed MERGE whose source is written
   inline in `USING (...)`, never a temporary view.
 - No Silver, Gold or MLV code or table references in any cell, including the
@@ -102,6 +118,8 @@ the warm session shows the rerun proof.
   lines as strings; every source value and audit path matches.
 - CDF enabled on every Bronze table; `customers_current` matches the 6 source
   customers.
+- The `bootcamp bronze rows validated: ...` line lists the row count of every
+  table the check read; no row is rejected.
 - Code is documented native Spark SQL. Save code/output and tick your tasks.
 
 If setup fails, retain returned IDs, resume/poll the accepted operation and
