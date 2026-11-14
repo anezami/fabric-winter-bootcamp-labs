@@ -1,6 +1,14 @@
 # Lab 3: Gold from the Silver change feed
 
-**8 minutes.** Prerequisite: Lab 2 passes.
+**8 minutes · session minutes 35–43.** Prerequisite: Lab 2 passes.
+
+| Goal | Start | Open | Finish signal |
+|---|---|---|---|
+| Report each sale using the customer version valid at order time | Silver initial-load PASS | `nb_bootcamp_gold` | Gold PASS: 9 facts, 16 units, 516.73 net and five current watermarks |
+
+**Watch, work, check:** watch the as-of join and touched-order filter, then
+review your own cells. Run Gold only after Silver passes. Keep the actual
+CDF bounds as evidence; matching totals alone do not prove incremental processing.
 
 Open `nb_bootcamp_gold`. It reads only Silver; session variables and
 temporary views do not carry over from other notebooks, so the generated
@@ -26,8 +34,9 @@ Show the cells and the exact write set. Stop for my code approval.
 **Decision 7 · approve the Gold code.** Check:
 
 - Each generated cell is `%%sql` with a `-- Stage: gold - …` header.
-- It reads Silver only through `table_changes()` from each watermark + 1,
-  ignores `update_preimage`, never reads Bronze and contains no
+- It uses Silver `table_changes()` from each watermark + 1 to identify
+  changed keys, ignores `update_preimage`, and uses current Silver rows to
+  assemble affected facts and dates. It never reads Bronze and contains no
   Silver-building or MLV code; the fixed baseline and check cells are
   Gold-specific too.
 - Every MERGE source is inline in `USING (...)`; `dim_customer` is keyed on
@@ -56,7 +65,11 @@ If time remains, an optional second **Run all** in the warm session lets the
 baseline find Gold current, so the check proves that your cells committed
 nothing.
 
-**Decision 8 · accept the result.** Query the star:
+**Decision 8 · accept the result.** Compare the fixed output with the
+definition of done.
+
+**Stretch inspection:** query the star only after the job ends, with time
+remaining in an existing session. Do not start Spark just for this query:
 
 ```sql
 SELECT d.date, f.store_id, f.channel, c.city, SUM(f.net_amount) AS net_amount
@@ -88,8 +101,11 @@ evidence. Compare with the definition of done and accept by pasting the
 - Gold tables and columns carry comments; code is documented native Spark
   SQL. Save evidence and tick your tasks.
 
+## If blocked
+
 On failure, reply `repair: <actual error>`, approve the patch and rerun.
 Never reset watermarks, overwrite history or relax the contract to pass; see
 [repair and recovery](recovery.md). Do not run the full pipeline until Lab 4.
 
 **Next:** [Lab 4 - Materialized lake views and the change batch](04-materialized-view.md).
+If Gold has not passed, repair it or watch without starting Lab 4.

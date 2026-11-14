@@ -51,9 +51,10 @@ live only inside one notebook run, and nothing survives between notebooks.
 All generated logic is native Spark SQL: each generated cell is a `%%sql`
 cell (the notebook's SQL language switch) holding Spark SQL statements, with
 no PySpark, no `spark.sql(...)` wrapper and no Python helper functions.
-PySpark is used only where SQL cannot do the job: the three fixed Python
-cells of each notebook (validator, baseline and stage check) need Delta
-history, Python assertions and expectations derived from the CSV files.
+PySpark is used only where SQL cannot do the job: the fixed validator and
+stage check use Python assertions and CSV-derived expectations. Bronze,
+Silver and Gold also have a fixed Python baseline cell for Delta history
+and rerun proof; MLV has no baseline cell.
 
 Layer isolation includes every SQL statement, cell, helper, constant and fixed
 check, even unused definitions. Bronze contains no Silver/Gold/MLV checks;
@@ -540,14 +541,34 @@ After the change batch and one pipeline run, C003 has an expired and a
 current version (Amsterdam, Gold), C007 has one current version and C002 has
 no current version but keeps its history, in both `silver.customer_history`
 and `gold.dim_customer`; `gold.customer_current` has six rows. A partial change state
-is not a valid checkpoint: repair and rerun the failing notebook, which
-resumes from its persisted watermarks.
+is not a valid checkpoint. After a terminal pipeline failure, preserve the
+child error, approve a scoped repair to the failing notebook and explicitly
+approve one pipeline retry. Resume from persisted watermarks, with no
+competing writer. Failed output retrieval never authorizes a retry.
 
 Idempotence means unchanged results: rerunning any Bronze, Silver or Gold
 notebook without new
 input leaves rows and Delta versions unchanged. Do not manufacture commits on
 CDF sources. A table holding the right values is not proof of MLV creation,
 nor are matching targets proof of CDF consumption.
+
+### Working through the live session
+
+Each lab starts with its goal, starting state, notebook and finish signal.
+Watch the brief demonstration, work in your own assigned workspace, then
+check your own output. The instructor's PASS is not your PASS. If a
+prerequisite fails, repair it or follow along without downstream writes.
+
+Fixed checks are mandatory. Extra inspection queries and warm no-op reruns
+are stretch work when they would delay the next stage; never start another
+Spark workload during the serial pipeline. Gold uses CDF to identify changed
+keys and current Silver rows to assemble facts and dates. MLV checks its
+contract, not a baseline/no-op version proof.
+
+Keep the 13/7/8/17-minute allocation and stop at session minute 60. Local
+checkpoints are pacing targets, not runtime guarantees. Record incomplete
+stages, actual output and pending job IDs before stopping only work you
+started. An accepted, running or unfinished job is not a PASS.
 
 ## 9. Optional labs
 

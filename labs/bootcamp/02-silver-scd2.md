@@ -1,6 +1,14 @@
 # Lab 2: Silver from the Bronze change feed
 
-**7 minutes.** Prerequisite: Lab 1 passes.
+**7 minutes · session minutes 28–35.** Prerequisite: Lab 1 passes.
+
+| Goal | Start | Open | Finish signal |
+|---|---|---|---|
+| Give each customer version a stable key and preserve history | Bronze initial-load PASS | `nb_bootcamp_silver` | Silver PASS, six history versions and five current watermarks |
+
+**Watch, work, check:** watch the key choice and one SCD2 close/open operation.
+Choose your strategy, approve your cells and run only Silver. Wait for your
+own PASS before Gold; do not copy another participant's keys or results.
 
 Open `nb_bootcamp_silver`. It has its own description, validator, fixed
 baseline cell and fixed check cell; session variables and temporary views do
@@ -65,7 +73,11 @@ If time remains, an optional second **Run all** in the warm session lets the
 baseline find Silver current, so the check proves that your cells committed
 nothing.
 
-**Decision 6 · accept the result.** Inspect the outcome, not just the code:
+**Decision 6 · accept the result.** Compare the fixed output with the
+definition of done; inspect the outcome, not just the code.
+
+**Stretch inspection:** use this query only if the job has ended and time
+remains in an existing session. Do not start Spark just for this query:
 
 ```sql
 SELECT customer_id, customer_sk, city, loyalty_tier,
@@ -94,8 +106,11 @@ Compare with the definition of done and accept by pasting the
   table the check read.
 - Code is documented native Spark SQL. Save output and tick your tasks.
 
+## If blocked
+
 On failure, reply `repair: <actual error>`, approve the patch to the generated
 code and rerun the notebook. Never recreate history, reset watermarks or
 change expected results; see [repair and recovery](recovery.md).
 
 **Next:** [Lab 3 - Gold from the Silver change feed](03-gold-cdf.md).
+If Silver has not passed, repair it or watch without running Gold.

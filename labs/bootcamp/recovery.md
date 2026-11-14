@@ -31,9 +31,11 @@ or create another workspace. Explain the root cause and show the smallest
 patch and exact write set. Stop for approval before executing it.
 ```
 
-Approve the patch, run only the affected stage and its unchanged checks, and
-keep the error and result locally. Do not start a duplicate job while one is
-queued or running.
+Before the change-batch pipeline, approve the patch and run only the affected
+stage and its unchanged checks. After a terminal pipeline failure, use
+[Lab 4's repair and explicitly approved pipeline retry](04-materialized-view.md#if-blocked).
+Keep the error and result locally. Do not start a competing job, or retry
+because output retrieval failed.
 
 ## Use instructor-supplied recovery only explicitly
 
@@ -44,10 +46,11 @@ live generation.
 Before using them, confirm the same identity, workspace and lakehouse, and
 stop any existing writer. Preserve your generated code/output. Replace only
 the implementation cells in the existing notebook; keep the validator, baseline
-and check cells, notebook ID and pipeline wiring. Recovery cells declare their
+(where present) and check cells, notebook ID and pipeline wiring. Recovery cells declare their
 own session variables and read the persisted Delta tables.
 
-Run that stage and its fixed checks, then continue downstream. Each stage
+Use the same stage-versus-pipeline recovery route above; upstream checks must
+already have passed. Each stage
 writes only its own layer and resumes from persisted Delta tables and its own
 `lab_ops.cdf_watermarks` rows: Bronze creates only missing tables, Silver and
 Gold consume the change feed after their watermarks, and the MLV stage
@@ -61,8 +64,9 @@ instructor repair decision, not an automatic reset.
 ## Stop on time
 
 Stop the live build after 45 minutes. Show available sales, history and
-lineage evidence, and label any incomplete stage. Keep completed work and
-stop Spark sessions you started.
+lineage evidence, and label any incomplete stage. Record pending job IDs and
+completed output before stopping only sessions/jobs you started. Confirm
+terminal status; never cancel another participant's work.
 
 After a complete build, pipeline replay must preserve customer history,
 surrogate keys, facts and watermark values. In each Bronze, Silver and Gold

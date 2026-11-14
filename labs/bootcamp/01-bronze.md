@@ -1,6 +1,14 @@
 # Lab 1: create the lakehouse and Bronze
 
-**13 minutes.** Prerequisite: the [pre-work ready check](pre-work.md#ready-check).
+**13 minutes · session minutes 15–28.** Prerequisite: the [pre-work ready check](pre-work.md#ready-check).
+
+| Goal | Start | Open | Finish signal |
+|---|---|---|---|
+| Land a replayable source, without changing its meaning | Empty assigned workspace on dedicated active F2 | Copilot at repo root, then `nb_bootcamp_bronze` | Setup verified and Bronze initial-load PASS |
+
+**Watch, work, check:** watch the instructor's setup approval, then use your
+own workspace name. While your job runs, review the generated cells and wait;
+do not launch another run. Your own PASS, not the instructor's, unlocks Lab 2.
 
 Start Copilot from the repo root with your assigned **empty workspace** on its
 dedicated active F2 capacity. No lakehouse, uploaded files, notebooks or warm
@@ -59,8 +67,9 @@ Preserve the CSVs and the other notebooks.
 Show the plan, cells and exact write set. Stop for my code approval.
 ```
 
-**Decision 2 · approve the Bronze code.** Open `nb_bootcamp_bronze` and
-review the newly generated code against this checklist:
+**Decision 2 · approve the Bronze code.** Review Copilot's proposed cells
+against this checklist. The notebook still contains its placeholder until
+you approve; Copilot saves the new cells only after approval:
 
 - Native Spark SQL: each cell starts with `%%sql` and a
   `-- Stage: bronze - …` header; any PySpark is justified in that header.
@@ -122,6 +131,8 @@ the warm session shows the rerun proof.
   table the check read; no row is rejected.
 - Code is documented native Spark SQL. Save code/output and tick your tasks.
 
+## If blocked
+
 If setup fails, retain returned IDs, resume/poll the accepted operation and
 reconcile only this approved setup. Do not duplicate creates or overwrite
 conflicting items/files. Ask the instructor about access/capacity blocks.
@@ -136,3 +147,5 @@ over a Delta table; the fix is to write that source inline in `USING (...)`.
 Follow [repair and recovery](recovery.md), without weakening the checks.
 
 **Next:** [Lab 2 - Silver and SCD2](02-silver-scd2.md).
+Continue only after your PASS. If blocked, keep your error and follow the
+walkthrough without running downstream layers.

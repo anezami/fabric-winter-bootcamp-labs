@@ -82,9 +82,10 @@ Use the unchanged fixed check cell in each stage notebook, as in Labs 1-4.
 Before the change file lands each stage prints its initial-load PASS; after
 the pipeline run it prints
 `PASS: bootcamp <stage> contract, after the customer change batch (fixed read-only checks)`.
-Each check also reports either
+Only Bronze, Silver and Gold additionally report either
 `PASS: bootcamp <stage> was built or brought to contract by this run` or
 `PASS: bootcamp <stage> was already current and the rerun changed nothing`.
+MLV reports its contract PASS and row counts, not unchanged Delta versions.
 
 Inspect real bounded reads, version ranges, watermark ordering, MLV DDL and
 Fabric lineage. Do not infer the method from matching counts, or incremental

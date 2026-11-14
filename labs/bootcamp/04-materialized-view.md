@@ -1,6 +1,15 @@
 # Lab 4: Materialized lake views and the change batch
 
-**17 minutes.** Prerequisite: Labs 1-3 pass.
+**17 minutes · session minutes 43–60.** Prerequisite: Labs 1-3 pass.
+
+| Goal | Start | Open | Finish signal |
+|---|---|---|---|
+| Serve reconciled results and carry one change batch through every layer | Bronze, Silver and Gold initial checks passed | `nb_bootcamp_mlv`, then `pl_bootcamp_build` | Both MLVs verified; every pipeline stage has change-batch PASS |
+
+**Watch, work, check:** watch the two serving definitions, approve yours and
+run MLV once. As soon as it passes, make decision 10 and launch your pipeline.
+Aim to launch by session minute 47; this is a pacing target, not a runtime
+guarantee. If a prerequisite failed, stop and get help instead of skipping it.
 
 Open `nb_bootcamp_mlv`. Its description, validator and fixed check cell are
 already present. The goal is two real Fabric materialized lake views over
@@ -29,10 +38,10 @@ Show the cells and the exact write set. Stop for my code approval.
 defines `gold.sales_daily` and `gold.customer_current` with
 `CREATE OR REPLACE MATERIALIZED LAKE VIEW` (not tables or ordinary views),
 with the exact grouping, columns and `ON MISMATCH FAIL` constraints. Reply
-`change: <what>` or `approve` to save and run it once. The views are replaced
-as a whole on every run, so no schema carries over and there is no rerun
-proof. The shell's fixed check cell runs
-after your generated cells:
+`change: <what>` or `approve` to save and run it once. The definitions are
+recreated on rerun and their exact schema is still checked; this is not
+evidence of incremental refresh or unchanged Delta versions. MLV has no
+baseline/rerun cell. Its fixed contract check runs after your generated cells:
 
 ```python
 validate_bootcamp(spark, "mlv")       # fixed check cell, after the generated cells
@@ -63,10 +72,12 @@ pipeline carries it through every layer, so reply `go` only when the preflight
 is clean; otherwise `stop` and fix the failing stage first.
 
 The pipeline runs Bronze, Silver, Gold and MLV in order. Every fixed check now
-expects the changed state. Each baseline cell finds a layer that has not seen
-the change batch yet, so each check ends with
-`PASS: bootcamp <stage> was built or brought to contract by this run`. If
-time remains afterwards, **Run all** one notebook again: its check must print
+expects the changed state. Bronze, Silver and Gold have baseline cells; on
+this first change-batch run they also report
+`PASS: bootcamp <stage> was built or brought to contract by this run`.
+MLV reports its contract PASS and validated row counts only.
+As optional after-session work, **Run all** a Bronze, Silver or Gold notebook
+with no new input: its check must print
 `PASS: bootcamp <stage> was already current and the rerun changed nothing`.
 
 **Timing:** allow about 10-13 minutes on F2 for four serial notebook jobs;
@@ -120,18 +131,24 @@ label any stage that needed recovery.
 - Generated code and check output are saved in your notebooks. Tick the
   completed tasks.
 
-On failure, reply `repair: <actual error>` to repair the generated code in
-the failing notebook only, keeping the checks fixed. Rerun the pipeline once;
-Bronze and Silver no-op if already applied. If materialized lake views are
+## If blocked
+
+On failure, wait for the pipeline and its child job to reach a terminal
+state. Reply `repair: <actual error>` to repair the generated code in
+the failing notebook only, keeping the checks fixed. Approve the patch and
+explicitly approve one pipeline retry; do not launch a competing notebook.
+Already-current Bronze, Silver and Gold stages must no-op. An error retrieving
+output is not a failed execution and never authorizes a retry. If materialized lake views are
 unavailable, label the stage "query checked; materialized lake view not
 created"; that is not a pass. Follow [repair and recovery](recovery.md).
 
 ## Finish the live build
 
 Stop at the end of the 45-minute build, even if a stage needs labelled
-[recovery](recovery.md). Show the pipeline dependency graph and see
+[recovery](recovery.md). Record completed stages, actual output and any
+pending job ID; an unfinished job is not a PASS. Show the dependency graph and see
 [the setup execution guidance](setup.md#5-generate-approve-and-execute) for
-later reruns. Stop Spark sessions you started.
+later reruns. Stop only sessions/jobs you started and confirm terminal status.
 
 **Optional next steps:** [Project Osmos](05-osmos-replay.md) in a fresh
 approved target, or [semantic model and Fabric IQ](06-semantic-model-fabric-iq.md)
